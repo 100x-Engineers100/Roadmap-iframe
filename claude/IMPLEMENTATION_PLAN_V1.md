@@ -26,7 +26,7 @@ prompt - READ FIRST: C:\Users\visha\Downloads\Roadmap iframe\IMPLEMENTATION_PLAN
   3. Resend API key + verified sending domain
   4. Cloudflare access to deploy Zeno Worker changes
   5. ZENO_INTERNAL_SECRET value to generate (suggest: run `openssl rand -hex 32`)
-  6. Framer site domain/URL (needed for OAuth redirect URLs and share link pattern)
+  6. Framer site domain/URL (needed for OAuth redirect URLs)
 
   OPEN QUESTIONS TO RESOLVE WITH USER BEFORE BUILDING:
   - Q3 in intake (weak areas): user said "can add more" — confirm final chip list or use plan defaults
@@ -67,8 +67,7 @@ A personalized AI career roadmap generator embedded in the 100x Engineers Framer
 4. Auth completes → user redirected to roadmap result page
 5. Page shows loading state while generation runs in background
 6. Roadmap SVG renders → user can download SVG or PNG
-7. User can share roadmap via share link (roadmap view only)
-8. Automated reminder emails sent at +3 days and +6 days post-generation
+7. Automated reminder emails sent at +3 days and +6 days post-generation
 
 ### End Goal
 - Generate leads for 100x Engineers cohort
@@ -257,7 +256,7 @@ generateRoadmap():
   7. Validate JSON output (Zod)
   8. Render SVG from roadmap JSON
   9. Upload SVG to Supabase Storage
-  10. Update roadmap record: { status: "complete", roadmap_json, svg_url, share_token }
+  10. Update roadmap record: { status: "complete", roadmap_json, svg_url }
   11. Schedule reminder records in DB
 
 Framer polls GET /status?id=<roadmap_id> every 3 seconds
@@ -1109,8 +1108,7 @@ GPT-4.1 has per-minute token limits. If multiple users generate simultaneously, 
 **Supabase anon key exposed in Framer**  
 Anon key is designed to be public. RLS policies are the security layer. Verify all RLS policies before launch.
 
-**Share token collisions**  
-Using crypto.randomUUID() — collision probability is astronomically low. No mitigation needed.
+*(Share token collisions risk removed — share system deferred to v2)*
 
 ---
 
