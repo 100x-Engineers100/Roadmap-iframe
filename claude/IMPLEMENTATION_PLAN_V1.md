@@ -43,9 +43,15 @@ prompt - READ FIRST: C:\Users\visha\Downloads\Roadmap iframe\IMPLEMENTATION_PLAN
 
 # 100x AI Roadmap Builder — V1 Implementation Plan
 
-**Date:** 2026-04-23  
-**Status:** Ready for build  
+**Date:** 2026-04-23 (revised 2026-04-24)
+**Status:** Ready for build — V1.1 (post adversarial review fixes)
 **Purpose:** Complete reference for agents building V1. Every decision is locked. Do not assume anything not in this doc.
+
+**Changes in V1.1:**
+- FIX: users.id = auth.uid() (Supabase UUID), not google_sub. RLS now uses direct UUID match.
+- FIX: All RLS policies rewritten — no cast, no subquery join for ownership checks.
+- FIX: reminders UNIQUE (roadmap_id, reminder_type) constraint added.
+- REMOVED: Share system (share_token, share_enabled, share RLS, share page) → v2.
 
 ---
 
@@ -217,8 +223,17 @@ Button: Continue with Google
 ### Post-Auth Backend
 ```
 1. Edge Function /auth-complete called with session JWT
-2. Upsert user in Supabase: { id: google_sub, email: google_email, display_name, mobile, country_code }
-3. Create roadmap record: { id: uuid, user_id, intake_answers, status: 'pending' }
+2. Upsert user in Supabase:
+   {
+     id: user.id,                        // Supabase Auth UUID (auth.uid()) — NOT google_sub
+     google_sub: user.user_metadata.sub, // stored for reference only
+     email: user.email,
+     display_name,
+     mobile,
+     country_code
+   }
+   ON CONFLICT (id) DO UPDATE SET email=EXCLUDED.email, display_name=EXCLUDED.display_name
+3. Create roadmap record: { id: uuid, user_id: user.id, intake_answers, status: 'pending' }
 4. Return { roadmap_id }
 5. Trigger /generate asynchronously (EdgeRuntime.waitUntil)
 ```
@@ -637,7 +652,7 @@ Surface:  #f5f5f3  (alternate backgrounds)
 │  FOOTER STRIP (160px)                        │
 │  "Start here:" + next_7_days[0]              │
 │  coaching_note (muted)                       │
-│  Share CTA: "Share your new beginning..."    │
+│  "Built with 100x Engineers curriculum"      │
 └─────────────────────────────────────────────┘  y:1800
 ```
 
@@ -707,8 +722,9 @@ async function exportPNG(svgUrl: string): Promise<void> {
 
 ```sql
 -- Users
+-- id = Supabase Auth UUID (auth.uid()). Inserted on first login, NOT gen_random_uuid().
 CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY,
   google_sub TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
   display_name TEXT NOT NULL,
@@ -742,13 +758,12 @@ CREATE TABLE roadmaps (
     CHECK (status IN ('pending', 'generating', 'complete', 'failed')),
   roadmap_json JSONB,
   svg_url TEXT,
-  share_token TEXT UNIQUE,
-  share_enabled BOOLEAN DEFAULT FALSE,
   generation_attempts INTEGER DEFAULT 0,
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- share_token / share_enabled deferred to v2
 
 -- Hidden revision history
 CREATE TABLE roadmap_revisions (
@@ -768,7 +783,8 @@ CREATE TABLE reminders (
   sent_at TIMESTAMPTZ,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'sent', 'failed')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (roadmap_id, reminder_type)  -- prevents duplicate reminder inserts
 );
 ```
 
@@ -783,15 +799,27 @@ ALTER TABLE roadmap_revisions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
 
 -- Users: own data only
+-- auth.uid() = Supabase Auth UUID, which IS users.id — direct match, no cast or join needed
 CREATE POLICY "users_own" ON users FOR ALL
-  USING (auth.uid()::text = google_sub);
+  USING (auth.uid() = id);
 
--- Roadmaps: own + share token public read
+-- Intake answers: own only
+CREATE POLICY "intake_own" ON intake_answers FOR ALL
+  USING (user_id = auth.uid());
+
+-- Roadmaps: own only (direct UUID match — no subquery needed)
 CREATE POLICY "roadmaps_own" ON roadmaps FOR ALL
-  USING (user_id IN (SELECT id FROM users WHERE google_sub = auth.uid()::text));
+  USING (user_id = auth.uid());
 
-CREATE POLICY "roadmaps_share_read" ON roadmaps FOR SELECT
-  USING (share_enabled = TRUE AND share_token IS NOT NULL);
+-- Roadmap revisions: own only
+CREATE POLICY "revisions_own" ON roadmap_revisions FOR ALL
+  USING (roadmap_id IN (SELECT id FROM roadmaps WHERE user_id = auth.uid()));
+
+-- Reminders: own only
+CREATE POLICY "reminders_own" ON reminders FOR ALL
+  USING (user_id = auth.uid());
+
+-- NOTE: No share policy in v1. Share system deferred to v2.
 ```
 
 ### pg_cron Jobs
@@ -889,7 +917,7 @@ Deno.serve(async (req) => {
 1. IntakeOverlay.tsx      — 7-question form, chip selectors, dropdowns
 2. RegistrationCard.tsx   — mobile input + Google auth trigger
 3. RoadmapLoader.tsx      — polling state, loading animation
-4. RoadmapDisplay.tsx     — shows SVG, download buttons, share CTA
+4. RoadmapDisplay.tsx     — shows SVG, download SVG button, PNG export button
 ```
 
 ### Supabase Client Init (Framer)
@@ -931,20 +959,11 @@ On page mount: read `id` from URL params → call status endpoint → handle all
 
 ## 13. Share System
 
-### Share Link Pattern
-```
-https://your-framer-site.com/roadmap/share/<random_token>
-```
-- Token: `crypto.randomUUID()` or `nanoid()`
-- Stored in `roadmaps.share_token`
-- Enabled by user clicking "Share" → sets `share_enabled = TRUE`
-- Share page: loads roadmap SVG only — NO personal data (no name shown on share page, no phone, no answers)
-- Revocable: user can disable share link → sets `share_enabled = FALSE`
+**DEFERRED TO V2.** Not in v1 scope.
 
-### Share CTA Copy
-```
-Share your new beginning: your AI roadmap starts here.
-```
+Removed: share_token column, share_enabled column, share RLS policy, share CTA in SVG footer, share button in Framer UI.
+
+V2 design note: serve share via dedicated RPC/endpoint scoped to exact token, return redacted payload (SVG only, no personal data). Do not use blanket table SELECT policy.
 
 ---
 
@@ -1040,7 +1059,7 @@ STEP 9: Framer — Roadmap Result Page
   - SVG display
   - Download SVG button
   - PNG export (client-side canvas)
-  - Share button + CTA copy
+  - No share button (v2)
 
 STEP 10: Production Hardening
   - Validate SVG is self-contained (no external refs)
@@ -1100,6 +1119,7 @@ Using crypto.randomUUID() — collision probability is astronomically low. No mi
 These are explicitly out of scope for v1. Do not build them now.
 
 ```
+- Share system (share_token, share_enabled, share RLS, share page)
 - Chat editing of roadmap
 - Interactive node graph (React Flow + ELK)
 - Progress tracking (milestone completion)
@@ -1157,9 +1177,11 @@ SUPABASE_ANON_KEY=eyJ...
 | Pre-generated reminder emails | LLM writes email bodies at roadmap creation time | No second LLM call at send time, personalized |
 | Index-first Zeno retrieval | get_index → topic mapping → fetch pages | Reduces irrelevant page fetches |
 | Popup OAuth not redirect | window.open + postMessage | Framer state survives, no sessionStorage dance |
+| Supabase UUID as users.id | users.id = auth.uid(), not google_sub | Direct RLS match — no cast, no join, no identity mismatch |
 | Anon key in Framer | supabase-js with RLS policies | Designed pattern, RLS is the security layer |
 | JSON source of truth | Roadmap JSON → SVG + PNG + emails | All outputs from one artifact, consistent |
-| Private Storage + signed URLs | SVG in private bucket | Share link controls access without exposing storage paths |
+| Private Storage + signed URLs | SVG in private bucket | Authenticated access only; share system is v2 |
+| Share system deferred | No share_token/share_enabled in v1 | Blanket SELECT policy leaks full roadmap_json; safe design requires dedicated RPC |
 
 ---
 
