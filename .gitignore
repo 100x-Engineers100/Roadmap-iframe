@@ -1,0 +1,26 @@
+# secrets & credentials
+*.json
+!web/package.json
+!web/tsconfig.json
+.env
+.env.local
+.env*.local
+
+# internal planning docs
+claude/
+codex/
+tasks/
+
+# Next.js
+web/.next/
+web/node_modules/
+web/out/
+web/.vercel/
+
+# Supabase local
+supabase/.temp/
+supabase/functions/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

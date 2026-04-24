@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --coral: #FF6343;
+  --coral-light: #FFE1DB;
+  --bg: #F7F7F7;
+  --text: #232323;
+  --muted: #888;
+  --border: #E0DDD8;
+  --white: #ffffff;
+  --font-sans: var(--font-space-grotesk), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+.font-clash {
+  font-family: "Clash Display", sans-serif;
+}
