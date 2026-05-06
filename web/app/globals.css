@@ -1,17 +1,48 @@
 @import "tailwindcss";
 
-:root {
-  --coral: #FF6343;
-  --coral-light: #FFE1DB;
-  --bg: #F7F7F7;
-  --text: #232323;
-  --muted: #888;
-  --border: #E0DDD8;
-  --white: #ffffff;
-  --font-sans: var(--font-space-grotesk), sans-serif;
-  --font-mono: var(--font-jetbrains-mono), monospace;
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scanLine {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+@keyframes barPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes progressFill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --coral:       #FF6343;
+  --coral-dim:   #FFE1DB;
+  --coral-dark:  #B22C11;
+  --bg:          #F9F9F9;
+  --text:        #1A1C1C;
+  --muted:       #5A413B;
+  --muted2:      #888;
+  --border:      #E2BFB7;
+  --border-dark: #D4CEC9;
+  --surface:     #FFFFFF;
+  --font-sans:   var(--font-space-grotesk), sans-serif;
+  --font-mono:   var(--font-jetbrains-mono), monospace;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 body {
   background: var(--bg);
   color: var(--text);
@@ -20,4 +51,56 @@ body {
 
 .font-clash {
   font-family: "Clash Display", sans-serif;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+.animate-in {
+  animation: fadeSlideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.step-in {
+  animation: stepIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Hard shadow (offset solid, no blur — design.md) ─────────────────────── */
+.shadow-hard {
+  box-shadow: 4px 4px 0 0 var(--border-dark);
+}
+
+.shadow-hard-coral {
+  box-shadow: 4px 4px 0 0 var(--coral);
+}
+
+.shadow-hard-sm {
+  box-shadow: 3px 3px 0 0 var(--border-dark);
+}
+
+/* ── Grid background ──────────────────────────────────────────────────────── */
+.bg-grid {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(178, 44, 17, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(178, 44, 17, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Mobile: tighten IntakeForm card padding ─────────────────────────────── */
+@media (max-width: 600px) {
+  .intake-card {
+    padding: 16px !important;
+  }
+}
+
+/* ── Dark glassmorphism (image ref: dark navy tinted panel) ───────────────── */
+.frozen-glass {
+  background: rgba(6, 10, 26, 0.50);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-top-color: rgba(255, 255, 255, 0.22);
+  border-radius: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.20);
 }

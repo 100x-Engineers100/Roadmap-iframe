@@ -17,12 +17,11 @@ function RoadmapContent() {
 
   useEffect(() => {
     if (!roadmapId) { router.replace("/"); return; }
+    const supabase = createClient();
 
     async function poll() {
-      const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.replace("/"); return; }
-
       setStatus("generating");
 
       intervalRef.current = setInterval(async () => {
@@ -32,7 +31,6 @@ function RoadmapContent() {
         );
         if (!res.ok) return;
         const data = await res.json();
-
         if (data.status === "complete") {
           clearInterval(intervalRef.current!);
           setSvgUrl(data.svg_url);
@@ -55,86 +53,80 @@ function RoadmapContent() {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = "100x-roadmap.svg";
-    a.click();
+    a.href = url; a.download = "100x-roadmap.svg"; a.click();
     URL.revokeObjectURL(url);
   }
 
   if (status === "loading" || status === "generating") {
     return (
-      <main className="min-h-screen bg-[#F7F7F7] flex flex-col items-center justify-center gap-6">
-        <div className="animate-spin h-10 w-10 border-2 border-[#FF6343] border-t-transparent rounded-full" />
-        <div className="text-center">
-          <p className="font-clash text-xl font-bold text-[#232323]">Building your roadmap</p>
-          <p className="text-sm text-[#888] mt-1 font-mono">Analysing 100x curriculum → generating plan → rendering SVG</p>
+      <div className="min-h-screen bg-grid flex flex-col items-center justify-center px-4">
+        <div className="bg-white border border-[#E2BFB7] rounded-sm p-10 max-w-sm w-full shadow-hard animate-in">
+          <div className="relative h-1 bg-[#E2BFB7] rounded-full overflow-hidden mb-8">
+            <div className="absolute top-0 left-0 h-full w-1/3 bg-[#FF6343] rounded-full" style={{ animation: "scanLine 1.8s ease-in-out infinite" }} />
+          </div>
+          <p className="font-mono text-[10px] text-[#FF6343] tracking-[0.15em] uppercase mb-2">100x Engineers</p>
+          <p className="font-clash text-2xl font-bold text-[#1A1C1C] mb-1">Building your roadmap</p>
+          <p className="text-sm text-[#5A413B]">Analysing curriculum → generating plan → rendering SVG</p>
+          <div className="flex gap-1.5 mt-6">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-1 flex-1 rounded-full bg-[#FF6343]" style={{ animation: `barPulse 1.2s ease infinite`, animationDelay: `${i * 0.2}s` }} />
+            ))}
+          </div>
         </div>
-        <div className="flex gap-1 mt-2">
-          {[0,1,2].map((i) => (
-            <div
-              key={i}
-              className="h-1.5 w-8 bg-[#FF6343] rounded-full opacity-40 animate-pulse"
-              style={{ animationDelay: `${i * 0.2}s` }}
-            />
-          ))}
-        </div>
-      </main>
+      </div>
     );
   }
 
   if (status === "failed") {
     return (
-      <main className="min-h-screen bg-[#F7F7F7] flex flex-col items-center justify-center gap-4">
-        <p className="text-red-500 font-semibold">Generation failed</p>
-        <p className="text-sm text-[#888]">{error}</p>
-        <button onClick={() => router.replace("/")} className="mt-4 px-6 py-3 bg-[#FF6343] text-white rounded-sm text-sm font-semibold hover:bg-[#e5522e]">
-          Try again
-        </button>
-      </main>
+      <div className="min-h-screen bg-grid flex flex-col items-center justify-center px-4">
+        <div className="bg-white border border-[#E2BFB7] rounded-sm p-8 max-w-sm w-full shadow-hard text-center animate-in">
+          <p className="font-clash text-xl font-bold text-[#1A1C1C] mb-2">Generation failed</p>
+          <p className="text-sm text-[#5A413B] mb-6">{error}</p>
+          <button onClick={() => router.replace("/")} className="w-full py-3 bg-[#FF6343] text-white font-semibold rounded-sm text-sm hover:bg-[#B22C11] transition-colors shadow-hard-coral">
+            Try again
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F7F7] py-10 px-4">
+    <div className="min-h-screen bg-grid py-12 px-4">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-8 animate-in">
           <div>
-            <p className="font-mono text-xs text-[#888] uppercase tracking-widest">100x Engineers</p>
-            <h1 className="font-clash text-2xl font-bold text-[#232323] mt-1">Your AI Roadmap</h1>
+            <p className="font-mono text-[10px] text-[#FF6343] tracking-[0.15em] uppercase mb-1">100x Engineers</p>
+            <h1 className="font-clash text-3xl font-bold text-[#1A1C1C]">Your AI Roadmap</h1>
+            <p className="text-sm text-[#5A413B] mt-1">Download and start today.</p>
           </div>
           <button
             onClick={downloadSVG}
-            className="flex items-center gap-2 px-5 py-3 bg-[#FF6343] text-white text-sm font-semibold rounded-sm hover:bg-[#e5522e] transition-colors"
+            className="flex items-center gap-2 px-5 py-3 bg-[#FF6343] text-white text-sm font-semibold rounded-sm hover:bg-[#B22C11] transition-colors shadow-hard-coral"
           >
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             Download SVG
           </button>
         </div>
 
-        <div className="bg-white border border-[#E0DDD8] rounded-sm overflow-hidden shadow-sm">
+        {/* Roadmap display */}
+        <div className="bg-white border-2 border-[#E2BFB7] rounded-sm overflow-hidden shadow-hard animate-in" style={{ animationDelay: "80ms" }}>
           {svgUrl && (
-            <img
-              src={svgUrl}
-              alt="Your AI Roadmap"
-              className="w-full h-auto"
-            />
+            <img src={svgUrl} alt="Your AI Roadmap" className="w-full h-auto" />
           )}
         </div>
 
-        <p className="text-center text-xs text-[#888] font-mono mt-6">
+        <p className="text-center font-mono text-[11px] text-[#888] mt-8 tracking-wider">
           Built with 100x Engineers curriculum · 100xengineers.com
         </p>
       </div>
-    </main>
+    </div>
   );
 }
 
 export default function RoadmapPage() {
-  return (
-    <Suspense>
-      <RoadmapContent />
-    </Suspense>
-  );
+  return <Suspense><RoadmapContent /></Suspense>;
 }

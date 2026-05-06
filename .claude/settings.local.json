@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm run *)",
+      "Read(//tmp/**)",
+      "mcp__claude_ai_Zeno_wiki__get_page",
+      "Bash(supabase functions *)",
+      "mcp__agentation__agentation_list_sessions",
+      "mcp__agentation__agentation_get_all_pending",
+      "mcp__agentation__agentation_watch_annotations",
+      "Bash(grep -o \".\\\\{200\\\\}endpoint.\\\\{0,5\\\\}[=/].\\\\{0,100\\\\}\" \"C:/Users/visha/Downloads/Roadmap iframe/web/node_modules/agentation/dist/index.js\")",
+      "mcp__agentation__agentation_resolve"
     ]
   }
 }
