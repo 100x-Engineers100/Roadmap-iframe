@@ -11,7 +11,8 @@ function RoadmapContent() {
   const router = useRouter();
   const roadmapId = params.get("id");
   const [status, setStatus] = useState<Status>("loading");
-  const [svgUrl, setSvgUrl] = useState<string | null>(null);
+  const [htmlUrl, setHtmlUrl] = useState<string | null>(null);
+  const [roadmapHtml, setRoadmapHtml] = useState<string | null>(null);
   const [error, setError] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -33,7 +34,10 @@ function RoadmapContent() {
         const data = await res.json();
         if (data.status === "complete") {
           clearInterval(intervalRef.current!);
-          setSvgUrl(data.svg_url);
+          setHtmlUrl(data.svg_url);
+          const htmlRes = await fetch(data.svg_url);
+          const html = await htmlRes.text();
+          setRoadmapHtml(html);
           setStatus("complete");
         } else if (data.status === "failed") {
           clearInterval(intervalRef.current!);
@@ -47,13 +51,13 @@ function RoadmapContent() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [roadmapId, router]);
 
-  async function downloadSVG() {
-    if (!svgUrl) return;
-    const res = await fetch(svgUrl);
+  async function downloadRoadmap() {
+    if (!htmlUrl) return;
+    const res = await fetch(htmlUrl);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "100x-roadmap.svg"; a.click();
+    a.href = url; a.download = "100x-roadmap.html"; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -102,22 +106,22 @@ function RoadmapContent() {
             <p className="text-sm text-[#5A413B] mt-1">Download and start today.</p>
           </div>
           <button
-            onClick={downloadSVG}
+            onClick={downloadRoadmap}
             className="flex items-center gap-2 px-5 py-3 bg-[#FF6343] text-white text-sm font-semibold rounded-sm hover:bg-[#B22C11] transition-colors shadow-hard-coral"
           >
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download SVG
+            Download
           </button>
         </div>
 
         {/* Roadmap display */}
-        <div className="bg-white border-2 border-[#E2BFB7] rounded-sm overflow-hidden shadow-hard animate-in" style={{ animationDelay: "80ms" }}>
-          {svgUrl && (
-            <img src={svgUrl} alt="Your AI Roadmap" className="w-full h-auto" />
-          )}
-        </div>
+        <div
+          className="bg-white border-2 border-[#E2BFB7] rounded-sm overflow-hidden shadow-hard animate-in"
+          style={{ animationDelay: "80ms" }}
+          dangerouslySetInnerHTML={roadmapHtml ? { __html: roadmapHtml } : undefined}
+        />
 
         <p className="text-center font-mono text-[11px] text-[#888] mt-8 tracking-wider">
           Built with 100x Engineers curriculum · 100xengineers.com

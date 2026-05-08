@@ -1,40 +1,32 @@
 import { z } from "npm:zod@3";
 
-const WeekCardSchema = z.object({
-  week: z.number().int().min(1).max(4),
-  theme: z.string(),
-  topics: z.array(z.string()).min(6).max(8),
-  tools: z.array(z.string()).min(2).max(5),
-  mini_project: z.string(),
-  capability_checkpoint: z.string(),
+const SubBranchSchema = z.object({
+  title: z.string(),
+  topics: z.array(z.string()).min(2).max(5),
 });
 
-const WeekBreakdownSchema = z.object({
-  week_label: z.string(),
-  topics: z.array(z.string()).min(3).max(5),
-});
-
-const MonthCardSchema = z.object({
-  month: z.number().int().min(2),
-  theme: z.string(),
-  week_breakdowns: z.array(WeekBreakdownSchema).length(4),
-  mini_project: z.string(),
-});
-
-const MilestoneMonthSchema = z.object({
-  month: z.number().int().min(1),
-  label: z.string(),
-  milestones: z.array(z.string()).min(3).max(4),
+const SpineNodeSchema = z.object({
+  order: z.number().int().min(1),
+  title: z.string(),
+  left_cluster: z.object({
+    label: z.string(),
+    topics: z.array(z.string()).min(3).max(6),
+  }),
+  right_cluster: z.object({
+    label: z.string(),
+    topics: z.array(z.string()).min(3).max(6),
+  }),
+  sub_branches: z.array(SubBranchSchema).optional(),
+  checkpoint: z.string(),
 });
 
 export const RoadmapSchema = z.object({
-  version: z.string(),
+  version: z.literal("4.0"),
   roadmap_title: z.string(),
   generated_at: z.string(),
   user_profile: z.object({
     name: z.string(),
     goal: z.string(),
-    target_role: z.string(),
     background_role: z.string(),
     experience_years: z.string(),
     weak_areas: z.array(z.string()),
@@ -44,9 +36,7 @@ export const RoadmapSchema = z.object({
   }),
   summary: z.string(),
   target_outcome: z.string(),
-  week_cards: z.array(WeekCardSchema).length(4),
-  month_cards: z.array(MonthCardSchema),
-  milestone_tracker: z.array(MilestoneMonthSchema),
+  spine_nodes: z.array(SpineNodeSchema).min(5).max(10),
   coaching_note: z.string(),
   reminder_emails: z.object({
     day_3: z.object({ subject: z.string(), body: z.string() }),
@@ -55,6 +45,5 @@ export const RoadmapSchema = z.object({
 });
 
 export type RoadmapJSON = z.infer<typeof RoadmapSchema>;
-export type WeekCard = z.infer<typeof WeekCardSchema>;
-export type MonthCard = z.infer<typeof MonthCardSchema>;
-export type MilestoneMonth = z.infer<typeof MilestoneMonthSchema>;
+export type SpineNode = z.infer<typeof SpineNodeSchema>;
+export type SubBranch = z.infer<typeof SubBranchSchema>;

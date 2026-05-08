@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { fetchZenoContext } from "../_shared/zeno-client.ts";
 import { generateRoadmapJSON, buildUserMessage } from "../_shared/llm-provider.ts";
-import { renderRoadmapSVG } from "../_shared/svg-renderer.ts";
+import { renderRoadmapHTML } from "../_shared/html-renderer.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -69,14 +69,14 @@ async function generateRoadmapBackground(
     });
 
     const roadmap = await generateRoadmapJSON(msg);
-    const svg = renderRoadmapSVG(roadmap);
+    const html = renderRoadmapHTML(roadmap);
 
-    // Upload SVG to storage
-    const svgBytes = new TextEncoder().encode(svg);
-    const storagePath = `${user.id}/${roadmapId}.svg`;
+    // Upload HTML to storage
+    const htmlBytes = new TextEncoder().encode(html);
+    const storagePath = `${user.id}/${roadmapId}.html`;
     const { error: uploadError } = await db.storage
       .from("roadmaps")
-      .upload(storagePath, svgBytes, { contentType: "image/svg+xml", upsert: true });
+      .upload(storagePath, htmlBytes, { contentType: "text/html", upsert: true });
     if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
     const { data: { publicUrl } } = db.storage.from("roadmaps").getPublicUrl(storagePath);
