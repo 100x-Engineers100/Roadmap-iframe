@@ -1,255 +1,157 @@
-"use client";
-import { useRef, useEffect } from "react";
-import IntakeForm from "@/components/IntakeForm";
+'use client';
 
-const VIDEO_SRC =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4";
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 
-const CROSSFADE_TRIGGER = 3.5; // seconds before end to start crossfade
-const CROSSFADE_MS = 2500;    // crossfade duration in ms
+const GRID_BG = `
+  linear-gradient(rgba(26,28,28,0.04) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(26,28,28,0.04) 1px, transparent 1px),
+  #f9f9f9
+`.trim();
 
-const VIDEO_STYLE: React.CSSProperties = {
-  position: "fixed",
-  top: "-8%",
-  left: "50%",
-  transform: "translateX(-50%)",
-  width: "115%",
-  height: "120%",
-  objectFit: "cover",
-  objectPosition: "center 20%",
-  zIndex: 0,
-  opacity: 0,
-  transition: `opacity ${CROSSFADE_MS}ms ease`,
+const container = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.15 },
+  },
 };
 
-function VideoBackground() {
-  const vid1Ref = useRef<HTMLVideoElement>(null);
-  const vid2Ref = useRef<HTMLVideoElement>(null);
-  // which video is currently the "active" (visible) one
-  const activeRef = useRef<1 | 2>(1);
-  const crossfadingRef = useRef(false);
-
-  useEffect(() => {
-    const vid1 = vid1Ref.current!;
-    const vid2 = vid2Ref.current!;
-
-    // Fade in vid1 on first ready
-    vid1.addEventListener("canplay", () => { vid1.style.opacity = "1"; }, { once: true });
-    vid1.play().catch(() => {});
-
-    const startCrossfade = () => {
-      if (crossfadingRef.current) return;
-      crossfadingRef.current = true;
-
-      const outVid = activeRef.current === 1 ? vid1 : vid2;
-      const inVid  = activeRef.current === 1 ? vid2 : vid1;
-
-      inVid.currentTime = 0;
-
-      const doSwap = () => {
-        // CSS transition handles the smooth opacity change — no RAF needed
-        outVid.style.opacity = "0";
-        inVid.style.opacity  = "1";
-
-        setTimeout(() => {
-          outVid.pause();
-          outVid.currentTime = 0;
-          activeRef.current  = activeRef.current === 1 ? 2 : 1;
-          crossfadingRef.current = false;
-        }, CROSSFADE_MS + 100);
-      };
-
-      // Wait for inVid to have its first frame before revealing it
-      if (inVid.readyState >= 3) {
-        inVid.play().then(doSwap).catch(doSwap);
-      } else {
-        inVid.addEventListener("canplay", () => {
-          inVid.play().then(doSwap).catch(doSwap);
-        }, { once: true });
-        inVid.load();
-      }
-    };
-
-    const onTimeUpdate = () => {
-      if (crossfadingRef.current) return;
-      const active = activeRef.current === 1 ? vid1 : vid2;
-      if (!active.duration) return;
-      if (active.duration - active.currentTime <= CROSSFADE_TRIGGER) {
-        startCrossfade();
-      }
-    };
-
-    vid1.addEventListener("timeupdate", onTimeUpdate);
-    vid2.addEventListener("timeupdate", onTimeUpdate);
-    return () => {
-      vid1.removeEventListener("timeupdate", onTimeUpdate);
-      vid2.removeEventListener("timeupdate", onTimeUpdate);
-    };
-  }, []);
-
-  return (
-    <>
-      <video ref={vid1Ref} src={VIDEO_SRC} autoPlay muted playsInline preload="auto" style={VIDEO_STYLE} />
-      <video ref={vid2Ref} src={VIDEO_SRC} muted playsInline preload="auto" style={{ ...VIDEO_STYLE }} />
-    </>
-  );
-}
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+};
 
 export default function Home() {
+  const router = useRouter();
+
   return (
-    <div
+    <main
+      className="min-h-screen flex items-center justify-center px-6"
       style={{
-        fontFamily: "var(--font-space-grotesk), sans-serif",
-        position: "relative",
-        minHeight: "100vh",
-        overflow: "hidden",
-        background: "#0a0a0a",
+        background: GRID_BG,
+        backgroundSize: '24px 24px',
       }}
     >
-      <VideoBackground />
-
-      {/* Dim overlay */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 1,
-          background:
-            "linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.45) 100%)",
-          pointerEvents: "none",
-        }}
-      />
-
-
-      {/* Centered hero */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "100vh",
-          padding: "0 16px 16px",
-          marginTop: "-60px",
-        }}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="flex flex-col items-center text-center w-full max-w-[680px]"
+        style={{ gap: 0 }}
       >
-        {/* Apple liquid glass tile — wraps entire content */}
-        <div
-          className="frozen-glass animate-in"
+        {/* Headline */}
+        <motion.h1
+          variants={fadeUp}
           style={{
-            position: "relative",
-            width: "100%",
-            maxWidth: "min(520px, calc(100vw - 24px))",
-            padding: "clamp(16px, 3vw, 22px) clamp(16px, 4vw, 36px)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            animationDelay: "0ms",
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 700,
+            lineHeight: 1.1,
+            letterSpacing: '-0.02em',
+            color: '#1a1c1c',
+            marginBottom: 24,
+          }}
+          className="text-[40px] md:text-[64px]"
+        >
+          What is your job worth in{' '}
+          <span style={{ color: '#b22c11' }}>5 years</span>?
+        </motion.h1>
+
+        {/* Subheadline */}
+        <motion.p
+          variants={fadeUp}
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: 18,
+            fontWeight: 400,
+            color: '#5a413b',
+            lineHeight: 1.6,
+            marginBottom: 32,
+            maxWidth: 520,
           }}
         >
-          {/* All children sit above the ::before shine */}
-          <div style={{ position: "relative", zIndex: 1, width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            {/* Badge */}
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "4px 10px",
-                borderRadius: "999px",
-                background: "rgba(255,99,67,0.12)",
-                marginBottom: "10px",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: "var(--font-space-grotesk), sans-serif",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#FF6343",
-                  letterSpacing: "0.14em",
-                  textTransform: "uppercase",
-                }}
-              >
-                100x Engineers
-              </span>
-            </div>
+          Find out using the same methodology economists use
+          <br className="hidden sm:block" />
+          to measure AI displacement risk.
+        </motion.p>
 
-            {/* Headline */}
-            <h1
-              style={{
-                fontFamily: "var(--font-space-grotesk), sans-serif",
-                fontSize: "clamp(22px, 3.5vw, 34px)",
-                fontWeight: 800,
-                color: "#ffffff",
-                letterSpacing: "-2px",
-                lineHeight: 1.05,
-                textAlign: "center",
-                margin: "0 0 8px",
-              }}
-            >
-              Build Your{" "}
-              <span
-                style={{
-                  color: "#FF6343",
-                  position: "relative",
-                  display: "inline-block",
-                }}
-              >
-                AI Roadmap
+        {/* CTA */}
+        <motion.div variants={fadeUp} style={{ marginBottom: 48, width: '100%' }}>
+          <motion.button
+            onClick={() => router.push('/assess')}
+            animate={{ scale: [1, 1.015, 1] }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              repeatDelay: 4.2,
+              ease: 'easeInOut',
+            }}
+            className="w-full sm:w-auto rounded-[4px] active:scale-[0.96]"
+            style={{
+              background: '#ff6343',
+              color: 'white',
+              fontFamily: 'var(--font-heading)',
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              height: 56,
+              paddingLeft: 52,
+              paddingRight: 52,
+              cursor: 'pointer',
+              border: 'none',
+              borderRadius: 8,
+              boxShadow: '0 4px 24px rgba(255,99,67,0.36)',
+              transition: 'background-color 0.15s, box-shadow 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#e8502e';
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 28px rgba(255,99,67,0.46)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#ff6343';
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(255,99,67,0.36)';
+            }}
+
+          >
+            Calculate My Risk Score →
+          </motion.button>
+        </motion.div>
+
+        {/* Credibility bar */}
+        <motion.div
+          variants={fadeUp}
+          className="flex items-center justify-center flex-wrap"
+          style={{ gap: 0 }}
+        >
+          {['O*NET', 'STANFORD HAI 2026', 'WEF Future of Jobs'].map((label, i) => (
+            <span key={label} className="flex items-center">
+              {i > 0 && (
                 <span
                   style={{
-                    position: "absolute",
-                    left: 0,
-                    bottom: "-4px",
-                    width: "100%",
-                    height: "3px",
-                    background: "#FF6343",
-                    borderRadius: "2px",
+                    display: 'inline-block',
+                    width: 1,
+                    height: 14,
+                    background: '#e2e2e2',
+                    margin: '0 16px',
                   }}
                 />
+              )}
+              <span
+                style={{
+                  fontFamily: 'var(--font-heading)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(95,94,94,0.8)',
+                }}
+              >
+                {label}
               </span>
-            </h1>
-
-            {/* Subtitle */}
-            <p
-              style={{
-                fontFamily: "var(--font-space-grotesk), sans-serif",
-                fontSize: "14px",
-                fontWeight: 400,
-                color: "rgba(255,255,255,0.60)",
-                textAlign: "center",
-                maxWidth: "340px",
-                lineHeight: 1.6,
-                margin: "0 0 14px",
-              }}
-            >
-              7 questions. Personalized plan grounded in 100x cohort curriculum.
-            </p>
-
-            {/* Form */}
-            <div style={{ width: "100%" }}>
-              <IntakeForm />
-            </div>
-
-            {/* Footer label */}
-            <p
-              style={{
-                fontFamily: "var(--font-jetbrains-mono), monospace",
-                fontSize: "12px",
-                fontWeight: 700,
-                color: "rgba(255,255,255,0.55)",
-                letterSpacing: "0.12em",
-                marginTop: "10px",
-              }}
-            >
-              MAP IT - DO IT
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+            </span>
+          ))}
+        </motion.div>
+      </motion.div>
+    </main>
   );
 }

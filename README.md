@@ -1,226 +1,201 @@
-# 100x AI Roadmap Builder
+# AI Displacement Risk Calculator + Roadmap Generator
 
-Generates a personalized AI learning roadmap based on user profile. Output is a visual HTML roadmap, stored in cloud, delivered via scheduled emails.
+A research-backed web tool that helps professionals understand how exposed their role is to AI disruption, then gives them a practical 90-day roadmap to become AI-native in their work.
 
----
+## Overview
 
-## Goal
+The product turns career uncertainty into a clear learning path.
 
-Take a learner's goal + background → produce a structured, visual learning roadmap with spine nodes, concept clusters, checkpoints, and follow-up reminders.
+Users enter their job role, adjust how they spend time across key tasks, receive an AI displacement risk score, see their skill gap, and unlock a personalized roadmap built around applied AI capabilities.
 
----
-
-## Architecture Overview
-
-```
-[User / Frontend]
-      |
-      | POST /generate  (JWT)
-      v
-[Supabase Edge Function: generate]
-      |
-      |-- Auth check (JWT → Supabase Auth)
-      |-- Rate limit check (2 roadmaps / 24h)
-      |-- Write: intake_answers, roadmaps (status: pending)
-      |-- Return { roadmap_id } immediately
-      |
-      | (background: EdgeRuntime.waitUntil)
-      |
-      |-- [1] Zeno MCP  →  course KB (overview + topics + evidence)
-      |-- [2] Build prompt  (profile + Zeno context)
-      |-- [3] OpenAI GPT-4.1-mini  →  roadmap JSON
-      |-- [4] Zod schema validation  (auto-retry once on fail)
-      |-- [5] renderRoadmapHTML()  →  styled HTML
-      |-- [6] Upload HTML  →  Supabase Storage
-      |-- [7] Write: roadmap_revisions, update roadmaps (status: complete)
-      |-- [8] Schedule reminders (day_3, day_6) in reminders table
-      |
-[Frontend polls GET /status?id=...]
-      |
-      | On complete: render svg_url in <iframe>
-      |
-[Cron → POST /send-reminders]
-      |
-      |-- Query due reminders (status=pending, scheduled_at <= now)
-      |-- Pull email content from roadmap_json.reminder_emails
-      |-- Send via Resend API
-      |-- Update reminder status (sent / failed)
+```txt
+Role input -> task profile -> risk score -> skill gap -> personalized roadmap
 ```
 
----
+## Product Goals
 
-## Input
+- Help professionals understand their AI exposure in plain English.
+- Convert abstract AI risk into specific skill gaps.
+- Recommend a practical 90-day path toward AI-native work.
+- Support high-intent lead capture for applied AI education.
 
-User submits intake form with these fields:
+## User Journey
 
-| Field | Type | Example |
+| Step | User experience | Outcome |
 |---|---|---|
-| `goal` | string | "Become an AI engineer" |
-| `background_role` | string | "Frontend developer" |
-| `experience_years` | string | "2 years" |
-| `weak_areas` | string[] | ["RAG", "agents"] |
-| `hours_per_week` | string | "10 hours" |
-| `learning_style` | string | "project-based" |
-| `timeframe_months` | number | 3 |
+| 1 | Enter current job role | Role is matched to a standard occupation profile |
+| 2 | Adjust task sliders | The score reflects how the user actually spends time |
+| 3 | View risk score | User sees risk level and plain-English explanation |
+| 4 | Review skill gap | Transferable strengths and missing skills are separated |
+| 5 | Unlock roadmap | User receives a personalized 90-day learning path |
 
----
+## Input -> Processing -> Output
 
-## Processing — Step by Step
+### Inputs
 
-### Step 1 — Auth + Rate Limit
-- JWT verified via Supabase anon client
-- Extracts `user_id`, `email`, `display_name` from token
-- Checks `roadmaps` table: max **2 generations per 24h** per user
-
-### Step 2 — DB Setup
-- Upsert user into `users`
-- Insert intake data into `intake_answers`
-- Insert new row into `roadmaps` with `status: "pending"`
-- Return `{ roadmap_id, status: "generating" }` to client **immediately** (non-blocking)
-
-### Step 3 — Zeno MCP Call
-- POST to internal Zeno server with: goal, background, weak_areas, timeframe
-- Returns:
-  - `overview` — course summary from knowledge base
-  - `index` — topic index
-  - `evidence[]` — up to 8 relevant topic excerpts
-
-### Step 4 — LLM Prompt Build
-- Combines: user profile fields + Zeno overview + topic index + top 8 evidence excerpts
-- Assembled into a single structured user message
-
-### Step 5 — OpenAI GPT-4.1-mini Call
-- Model: `gpt-4.1-mini`
-- `response_format: json_object` | `temp: 0.3` | `max_tokens: 12000`
-- System prompt defines three domain pools:
-  - `VISUAL_AI` — diffusion, ComfyUI, LoRA, video
-  - `LLM_FULLSTACK` — APIs, RAG, tool calling, MCP
-  - `AGENTS_PRODUCTION` — multi-agent patterns, evals, tracing
-- LLM selects domains based on user goal, builds spine-and-cluster structure
-- Output: roadmap JSON v4.0 (spine nodes, clusters, checkpoints, coaching note, reminder emails)
-- **Validated via Zod schema** — auto-retries once if validation fails
-
-### Step 6 — HTML Render
-- `renderRoadmapHTML(roadmap)` converts JSON → full styled HTML page
-- Layout: vertical spine with left cluster (concepts) + right cluster (tools/builds) per node
-- Optional sub-branches for deep domains (LoRA, RAG levels, multi-agent patterns)
-- Each node has a `CHECKPOINT` — one testable "Can you...?" question
-- Footer: coaching note + branding
-
-### Step 7 — Storage + DB Update
-- Upload HTML to **Supabase Storage**: `roadmaps/{user_id}/{roadmap_id}.html`
-- Get public URL
-- Insert into `roadmap_revisions` (versioned JSON history)
-- Update `roadmaps`: `status: "complete"`, store `roadmap_json`, set `svg_url` = public HTML URL
-
-### Step 8 — Reminder Scheduling
-- Insert 2 rows into `reminders`:
-  - `day_3`: `scheduled_at = now + 3 days`
-  - `day_6`: `scheduled_at = now + 6 days`
-- Email subject + body pre-generated by LLM (inside `roadmap_json.reminder_emails`)
-
----
-
-## Output
-
-### Frontend (sync polling)
-- Client polls `GET /status?id={roadmap_id}` with JWT
-- Status lifecycle: `pending → generating → complete` (or `failed`)
-- On `complete`: `svg_url` returned → renders in `<iframe>`
-
-### Emails (async cron)
-- `send-reminders` edge function runs on schedule
-- Queries `reminders` where `status = pending` AND `scheduled_at <= now`
-- Sends via **Resend API** from `roadmap@100xengineers.com`
-- Updates row: `status = sent` or `status = failed`
-
----
-
-## Supabase Setup
-
-### Edge Functions
-
-| Function | Method | Purpose |
-|---|---|---|
-| `generate` | POST | Intake → trigger roadmap generation |
-| `status` | GET | Poll roadmap status + get output URL |
-| `send-reminders` | POST | Send due reminder emails via Resend |
-
-### Database Tables
-
-| Table | Purpose |
+| Input | Purpose |
 |---|---|
-| `users` | Auth profile (id, email, display_name) |
-| `intake_answers` | Raw user input per generation request |
-| `roadmaps` | Status, roadmap_json, svg_url, error_message |
-| `roadmap_revisions` | Versioned history of roadmap JSON per roadmap |
-| `reminders` | Scheduled day_3 / day_6 email jobs with status |
+| Job description | Identifies the closest occupation profile |
+| Task time allocation | Personalizes risk based on actual work patterns |
+| Name and email | Unlocks roadmap and enables follow-up |
+| Occupation task data | Anchors task analysis in real labor-market data |
+| Curriculum skill map | Connects user gaps to teachable applied AI skills |
 
-### Storage
+### Processing
 
-| Bucket | Path pattern | Contents |
-|---|---|---|
-| `roadmaps` | `{user_id}/{roadmap_id}.html` | Rendered HTML roadmap (public URL) |
-
-### Auth
-- Supabase Auth (JWT)
-- Anon key used for JWT verification
-- Service role key used for all DB writes inside edge functions
-
-### Environment Variables
-
-```
-SUPABASE_URL
-SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-OPENAI_API_KEY
-ZENO_MCP_URL
-ZENO_INTERNAL_SECRET
-RESEND_API_KEY
-```
-
----
-
-## Roadmap JSON Schema (v4.0)
-
-```ts
-{
-  version: "4.0",
-  roadmap_title: string,
-  generated_at: ISO8601,
-  user_profile: { name, goal, background_role, experience_years, weak_areas[], hours_per_week, learning_style, timeframe_months },
-  summary: string,
-  target_outcome: string,
-  spine_nodes: [           // 5–10 nodes
-    {
-      order: number,
-      title: string,       // 3–5 word capability name
-      left_cluster: { label, topics: string[] },   // concepts (3–6 topics)
-      right_cluster: { label, topics: string[] },  // tools/builds (3–6 topics)
-      sub_branches?: [{ title, topics[] }],         // optional depth (0–4)
-      checkpoint: string   // "Can you...?" testable question
-    }
-  ],
-  coaching_note: string,
-  reminder_emails: {
-    day_3: { subject, body },
-    day_6: { subject, body }
-  }
-}
-```
-
----
-
-## Stack
-
-| Layer | Tech |
+| Stage | What happens |
 |---|---|
-| Frontend | Next.js + iframe embed |
-| Edge Runtime | Deno / Supabase Edge Functions |
-| Auth | Supabase Auth (JWT) |
-| Database | Supabase Postgres |
-| Storage | Supabase Storage |
-| LLM | OpenAI GPT-4.1-mini |
-| Schema Validation | Zod |
-| Knowledge Base | Zeno MCP (internal) |
-| Email | Resend |
+| Occupation matching | Free-text job input is mapped to a standard occupation code |
+| Task analysis | Role tasks are weighted by user-selected Low / Medium / High allocation |
+| Risk scoring | A composite model estimates AI displacement risk |
+| Skill gap inference | Current role strengths are separated from missing AI-native skills |
+| Roadmap generation | A 3-step, 90-day roadmap is generated from score, role, and skill gaps |
+
+### Outputs
+
+| Output | Description |
+|---|---|
+| Risk score | A 0-100 score with LOW, MODERATE, HIGH, or CRITICAL band |
+| Score explanation | Plain-English reasoning behind the score |
+| Skill gap view | Green transferable skills and red learning gaps |
+| Roadmap | A 90-day applied AI plan with clickable learning nodes |
+| Program CTA | A next step toward structured applied AI training |
+
+## Score Model
+
+The calculator uses a 4-factor composite model:
+
+```txt
+priorScore = (base_score - human_necessity_discount + demand_elasticity_adjustment) * adoption_multiplier
+finalScore = clamp(priorScore + task_adjustment, 0, 100) + market_calibration
+```
+
+| Factor | Meaning |
+|---|---|
+| Base AI exposure | How exposed the occupation is to current AI systems |
+| Human necessity | Whether the role requires human accountability, relationship, or physical presence |
+| Demand elasticity | Whether AI makes demand for the role grow or shrink |
+| Observed adoption | How much AI is already being used in similar work |
+| Task adjustment | How the user's actual task mix raises or lowers risk |
+| Market calibration | Regional and sector context applied where relevant |
+
+## Score Bands
+
+| Band | Range | Meaning |
+|---|---:|---|
+| LOW | 0-35 | Role is largely resilient to current AI capabilities |
+| MODERATE | 36-60 | Significant exposure; reskilling is recommended |
+| HIGH | 61-80 | High substitution risk within 3-5 years |
+| CRITICAL | 81-100 | Core tasks are highly exposed to current AI systems |
+
+## Roadmap Experience
+
+The roadmap is designed as a visual learning path, not a static report.
+
+- 3 phases across 90 days.
+- 2-3 top-level nodes per phase.
+- Snake-style roadmap spine with compact clickable nodes.
+- Each node opens a side panel with detailed subnodes.
+- Project checkpoints are shown inside the relevant node panel.
+- The final phase ends with a portfolio-style capstone project.
+
+## Curriculum Structure
+
+| Module | Focus |
+|---|---|
+| AI Content Creation | Image generation, video avatars, content workflows |
+| Full-Stack AI Applications | Prompting, retrieval, fine-tuning, tool use, app workflows |
+| AI Agents and Automation | Workflow automation, agents, guardrails, evaluation |
+
+Role-to-curriculum mapping:
+
+| Role type | Primary curriculum focus |
+|---|---|
+| Product | AI application workflows and automation |
+| Design | AI content creation and automation |
+| Marketing | AI content systems and automation |
+| Sales | AI content workflows and automation |
+| Engineering | AI applications and automation |
+| Student | Broad applied AI foundation |
+
+## Research Basis
+
+The scoring model draws from current labor-market, AI exposure, adoption, and productivity research.
+
+| Source | Year | Used for |
+|---|---:|---|
+| Eloundou et al., "GPTs are GPTs" | 2023 | Base occupation-level AI exposure |
+| OpenAI, "AI and the Labor Market: The Jobs Transition Framework" | 2026 | Human necessity and demand elasticity |
+| Anthropic Economic Index | 2025-2026 | Observed AI usage by occupation and task |
+| Stanford HAI AI Index Report | 2026 | Adoption validation and labor-market signals |
+| World Economic Forum, Future of Jobs Report | 2025 | Task exposure, industry automation, regional calibration |
+| Brynjolfsson, Li, and Raymond, "Generative AI at Work" | 2023 | Productivity and reskilling narrative |
+| Frey and Osborne, "The Future of Employment" | 2013 | Historical fallback automation benchmark |
+
+## Architecture Summary
+
+```txt
+Frontend
+  Role input
+  Task sliders
+  Score reveal
+  Skill gap view
+  Roadmap view
+
+Backend
+  Occupation matching
+  Task fetching
+  Risk scoring
+  Lead capture
+  Roadmap generation
+
+External systems
+  Occupation data
+  AI model provider
+  Database
+  Email platform
+```
+
+## Data Captured
+
+For each completed lead, the system stores:
+
+- Name and email
+- Matched occupation code and title
+- Role category
+- Risk score and band
+- Task weights
+- Skill gap
+- Generated roadmap
+- Email follow-up status
+
+## Cost Profile
+
+| Operation | Estimated cost |
+|---|---:|
+| Occupation matching | ~$0.001 |
+| Roadmap generation | ~$0.006 |
+| Occupation data lookup | Free |
+| Database write | < $0.001 |
+| Total per completed lead | ~$0.007-0.01 |
+
+## Launch Considerations
+
+Critical before launch:
+
+- Input sanitization for user job descriptions.
+- Rate limiting on AI-backed endpoints.
+- Server-side validation for all lead submissions.
+- Timeout-safe roadmap generation.
+- Fallback roadmap if AI generation fails.
+
+Operational improvements:
+
+- Cache repeated occupation matches.
+- Cache occupation task lookups.
+- Monitor API errors and roadmap generation failures.
+- Track roadmap views, node opens, and CTA clicks.
+
+## Status
+
+The product flow covers risk calculation, skill gap discovery, email unlock, and 90-day roadmap generation. The next focus is roadmap UI polish, component cleanup, and production hardening.
