@@ -93,7 +93,7 @@ async function run() {
   console.log('\nTEST 3.4 — inferSkillGap for engineer');
   try {
     const allSkills = await getAllSkills();
-    const gap = inferSkillGap('engineer', allSkills);
+    const gap = inferSkillGap('engineer', allSkills, [], {}, []);
 
     const total = gap.green.length + gap.red.length;
     assert(
@@ -109,8 +109,7 @@ async function run() {
     const s22InRed = gap.red.some((s) => s.id === 'S2.2');
     assert('3.4 S2.2 appears in red (roles has engineer, roles_adjacent does not)', s22InRed, `red ids: ${gap.red.map((s) => s.id).join(', ')}`);
 
-    const allGreenAdjacent = gap.green.every((s) => s.roles_adjacent.includes('engineer'));
-    assert('3.4 all green skills have roles_adjacent includes engineer', allGreenAdjacent);
+    // roles_adjacent logic removed — Phase 2 rewrite uses confirmedClusterIds for green determination
   } catch (err) {
     console.error(`[FAIL] TEST 3.4 threw: ${err instanceof Error ? err.message : err}`);
     failed += 4;

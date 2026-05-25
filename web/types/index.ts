@@ -2,6 +2,8 @@ export type RoleCategory = 'pm' | 'designer' | 'marketer' | 'sales' | 'engineer'
 export type ScoreBand = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
 export type Difficulty = 'foundational' | 'intermediate' | 'advanced';
 export type TaskWeight = 'low' | 'medium' | 'high';
+export type AiFamiliarity = 'none' | 'casual' | 'building';
+export type RoadmapNodeKind = 'concept' | 'project';
 
 export interface SOCMatch {
   soc_code: string;
@@ -28,9 +30,19 @@ export interface CurriculumSkill {
   seq_order: number;
 }
 
+export interface SkillCluster {
+  id: string;
+  name: string;
+  can_do: string;
+  skill_ids: string[];
+  module: 'm1' | 'm2' | 'm3';
+  roles: RoleCategory[];
+  checkpoint_hint: string;
+}
+
 export interface SkillGapResult {
-  green: CurriculumSkill[];
-  red: CurriculumSkill[];
+  green: SkillCluster[];
+  red: SkillCluster[];
 }
 
 export interface RoadmapSubnode {
@@ -38,10 +50,13 @@ export interface RoadmapSubnode {
   title: string;
   description: string;
   outcome: string;
+  tools?: string[];
+  time_est?: string;
 }
 
 export interface RoadmapNode {
   id: string;
+  node_kind?: RoadmapNodeKind;
   name_plain: string;
   one_line_desc: string;
   what_covers: string;
@@ -52,6 +67,13 @@ export interface RoadmapNode {
   skill_ids: string[];
   analogy: { base: string; role_skin: string; bridge_line: string };
   depth: Difficulty;
+}
+
+export interface RoadmapGlossaryTerm {
+  term: string;
+  definition: string;
+  source_node_id?: string;
+  group?: string;
 }
 
 export interface RoadmapStep {
@@ -72,6 +94,7 @@ export interface Roadmap {
   step1: RoadmapStep;
   step2: RoadmapStep;
   step3: RoadmapStep;
+  glossary?: RoadmapGlossaryTerm[];
 }
 
 export interface AssessmentState {

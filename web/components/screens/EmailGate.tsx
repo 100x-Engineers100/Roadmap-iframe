@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import type { RoleCategory, ScoreBand, SkillGapResult, TaskWeight, Roadmap } from '@/types';
+import { FunnelShell } from '@/components/screens/FunnelShell';
+import type { AiFamiliarity, OnetTask, RoleCategory, ScoreBand, SkillGapResult, TaskWeight, Roadmap } from '@/types';
 
 interface EmailGateProps {
   roleCategory: RoleCategory;
@@ -10,8 +11,10 @@ interface EmailGateProps {
   socTitle: string;
   riskScore: number;
   scoreBand: ScoreBand;
+  tasks: OnetTask[];
   taskWeights: Record<string, TaskWeight>;
   skillGap: SkillGapResult;
+  aiFamiliarity: AiFamiliarity;
   onRoadmapReady: (roadmap: Roadmap) => void;
 }
 
@@ -33,7 +36,7 @@ function CheckIcon() {
 
 export function EmailGate({
   roleCategory, socCode, socTitle, riskScore, scoreBand,
-  taskWeights, skillGap, onRoadmapReady,
+  tasks, taskWeights, skillGap, aiFamiliarity, onRoadmapReady,
 }: EmailGateProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,6 +51,12 @@ export function EmailGate({
     setErrorMsg('');
 
     try {
+      const weightOrder: Record<TaskWeight, number> = { high: 0, medium: 1, low: 2 };
+      const topTasks = [...tasks]
+        .sort((a, b) => weightOrder[taskWeights[a.id] ?? 'medium'] - weightOrder[taskWeights[b.id] ?? 'medium'])
+        .slice(0, 4)
+        .map(t => t.description);
+
       const res = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,8 +64,10 @@ export function EmailGate({
           name: name.trim(), email: email.trim(),
           soc_code: socCode, soc_title: socTitle, role_category: roleCategory,
           risk_score: riskScore, score_band: scoreBand, task_weights: taskWeights,
-          skill_gap: skillGap.red.map((s) => s.id),
-          skills_have: skillGap.green.map((s) => s.id),
+          skill_gap: skillGap.red,
+          skills_have: skillGap.green,
+          top_tasks: topTasks,
+          ai_familiarity: aiFamiliarity,
         }),
       });
 
@@ -75,45 +86,18 @@ export function EmailGate({
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4 py-16"
-      style={{ background: 'linear-gradient(160deg, #f9f9f9 0%, #f0ece8 100%)' }}
+    <FunnelShell
+      current={5}
+      stepLabel="Step 5 of 5"
+      title={<>Your AI-Native {roleName} roadmap is ready.</>}
+      subtitle="Save the result and unlock the full roadmap with the role-specific skill sequence."
+      width="compact"
     >
-      <div className="w-full max-w-[480px]">
-        {/* Step label */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{
-            fontFamily: 'var(--font-heading)', fontWeight: 500, fontSize: 11,
-            letterSpacing: '0.08em', color: '#b22c11', textTransform: 'uppercase',
-            marginBottom: 16, textAlign: 'center',
-          }}
-        >
-          STEP 4 OF 5
-        </motion.p>
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 22 }}
-          style={{
-            background: '#fff', borderRadius: 10,
-            padding: '36px 32px 28px',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
-          }}
         >
-          {/* Heading */}
-          <h1
-            style={{
-              fontFamily: 'var(--font-heading)', fontWeight: 700,
-              fontSize: 'clamp(20px, 4vw, 28px)', color: '#1a1c1c',
-              marginBottom: 20, lineHeight: 1.25,
-            }}
-          >
-            Your AI-Native {roleName} roadmap is ready.
-          </h1>
-
           {/* Value bullets */}
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
@@ -157,12 +141,12 @@ export function EmailGate({
                   style={{
                     width: '100%', height: 50, padding: '0 14px',
                     fontFamily: 'var(--font-body)', fontSize: 15, color: '#1a1c1c',
-                    border: '1.5px solid #e4e4e4', borderRadius: 6, outline: 'none',
-                    boxSizing: 'border-box', background: '#fafafa',
+                    border: '1.5px solid #e2bfb7', borderRadius: 8, outline: 'none',
+                    boxSizing: 'border-box', background: '#ffffff',
                     transition: 'border-color 0.15s',
                   }}
                   onFocus={(e) => { e.currentTarget.style.borderColor = '#b22c11'; e.currentTarget.style.background = '#fff'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = '#e4e4e4'; e.currentTarget.style.background = '#fafafa'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = '#e2bfb7'; e.currentTarget.style.background = '#fff'; }}
                 />
               </div>
             ))}
@@ -180,7 +164,7 @@ export function EmailGate({
                 height: 52, fontFamily: 'var(--font-heading)', fontWeight: 700,
                 fontSize: 14, letterSpacing: '0.05em',
                 backgroundColor: status === 'success' ? '#16a34a' : '#ff6343',
-                color: '#fff', border: 'none', borderRadius: 6,
+                color: '#fff', border: 'none', borderRadius: 999,
                 cursor: status === 'loading' ? 'not-allowed' : 'pointer',
                 transition: 'background-color 0.2s, box-shadow 0.2s',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -215,7 +199,7 @@ export function EmailGate({
             fontFamily: 'var(--font-body)', fontSize: 13, color: '#8e706a',
             textAlign: 'center', marginTop: 18,
           }}>
-            Join [PLACEHOLDER] professionals who&apos;ve mapped their AI risk profile.
+            Join professionals mapping their AI risk profile before the market forces the transition.
           </p>
           <p style={{
             fontFamily: 'var(--font-body)', fontSize: 12, color: '#b8a09a',
@@ -224,7 +208,6 @@ export function EmailGate({
             No spam. Unsubscribe anytime.
           </p>
         </motion.div>
-      </div>
-    </div>
+    </FunnelShell>
   );
 }

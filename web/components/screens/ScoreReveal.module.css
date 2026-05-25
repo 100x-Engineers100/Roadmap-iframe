@@ -1,0 +1,48 @@
+.scoreLayout {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  width: min(100%, 980px);
+  grid-template-columns: 320px minmax(0, 1fr);
+  align-items: center;
+  gap: 34px;
+  margin: 0 auto;
+}
+
+.gaugeColumn,
+.detailColumn {
+  min-width: 0;
+}
+
+.gaugeColumn {
+  display: grid;
+  justify-items: center;
+  border: 1px solid rgba(226, 191, 183, 0.76);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 246, 0.72)),
+    #ffffff;
+  box-shadow: 6px 6px 0 rgba(226, 191, 183, 0.26), 0 22px 48px rgba(26, 28, 28, 0.06);
+  padding: 30px 22px 26px;
+}
+
+.detailColumn {
+  border: 1px solid rgba(226, 191, 183, 0.78);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 246, 0.78)),
+    #ffffff;
+  box-shadow: 6px 6px 0 rgba(226, 191, 183, 0.28), 0 22px 48px rgba(26, 28, 28, 0.055);
+  padding: 26px;
+}
+
+@media (max-width: 767px) {
+  .scoreLayout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .detailColumn {
+    padding: 18px;
+  }
+}

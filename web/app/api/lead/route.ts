@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateRoadmap } from '@/lib/llm/roadmap-gen';
 import { insertLead } from '@/lib/db/leads';
-import type { RoleCategory, ScoreBand, TaskWeight } from '@/types';
+import type { AiFamiliarity, RoleCategory, ScoreBand, SkillCluster, TaskWeight } from '@/types';
 
 interface LeadRequestBody {
   name: string;
@@ -12,8 +12,10 @@ interface LeadRequestBody {
   risk_score: number;
   score_band: ScoreBand;
   task_weights: Record<string, TaskWeight>;
-  skill_gap: string[];
-  skills_have: string[];
+  skill_gap: SkillCluster[];
+  skills_have: SkillCluster[];
+  top_tasks: string[];
+  ai_familiarity: AiFamiliarity;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -27,6 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const {
     name, email, soc_code, soc_title, role_category,
     risk_score, score_band, task_weights, skill_gap, skills_have,
+    top_tasks, ai_familiarity,
   } = body as LeadRequestBody;
 
   if (!name || !email || !soc_code || !role_category) {
@@ -34,7 +37,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const roadmap = await generateRoadmap(
-    role_category, soc_title, risk_score, skill_gap, skills_have
+    role_category,
+    soc_title,
+    risk_score,
+    skill_gap ?? [],
+    skills_have ?? [],
+    top_tasks ?? [],
+    ai_familiarity ?? 'none'
   );
 
   try {
@@ -47,8 +56,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       risk_score,
       score_band,
       task_weights,
-      skill_gap,
-      skills_have,
+      skill_gap: (skill_gap ?? []).map(c => c.id),
+      skills_have: (skills_have ?? []).map(c => c.id),
       roadmap,
       india_adjusted: false,
       sector: null,
@@ -58,20 +67,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       email_seq_completed_at: null,
     });
   } catch (err) {
-    // DB failure should not block roadmap delivery
+    // DB failure must not block roadmap delivery
     console.error('insertLead failed:', err instanceof Error ? err.message : err);
   }
 
-  // Brevo email sequence — skip silently if key absent
   const brevoKey = process.env.BREVO_API_KEY;
   if (brevoKey) {
     try {
       await fetch('https://api.brevo.com/v3/contacts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': brevoKey,
-        },
+        headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
         body: JSON.stringify({
           email,
           attributes: { FIRSTNAME: name, ROLE: role_category, RISK_SCORE: risk_score },

@@ -13,6 +13,7 @@ import type {
   SOCMatch,
   OnetTask,
   TaskWeight,
+  AiFamiliarity,
   RoleCategory,
   ScoreBand,
   SkillGapResult,
@@ -28,6 +29,8 @@ interface AssessState {
   roleCategory: RoleCategory | null;
   tasks: OnetTask[];
   taskWeights: Record<string, TaskWeight>;
+  confirmedClusterIds: string[];
+  aiFamiliarity: AiFamiliarity;
   riskScore: number | null;
   scoreBand: ScoreBand | null;
   skillGap: SkillGapResult | null;
@@ -37,8 +40,8 @@ interface AssessState {
 
 type Action =
   | { type: 'CONFIRM_SOC'; soc: SOCMatch; tasks: OnetTask[]; role: RoleCategory; input: string }
-  | { type: 'SUBMIT_WEIGHTS'; weights: Record<string, TaskWeight> }
-  | { type: 'SET_SCORE'; score: number; band: ScoreBand; skillGap: SkillGapResult; fallbackUsed: boolean }
+  | { type: 'SUBMIT_WEIGHTS'; weights: Record<string, TaskWeight>; confirmedClusterIds: string[]; aiFamiliarity: AiFamiliarity }
+  | { type: 'SET_SCORE'; score: number; band: ScoreBand; skillGap: SkillGapResult; fallbackUsed: boolean; aiFamiliarity: AiFamiliarity }
   | { type: 'ADVANCE_TO_GAP' }
   | { type: 'ADVANCE_TO_EMAIL' }
   | { type: 'SET_ROADMAP'; roadmap: Roadmap }
@@ -51,6 +54,8 @@ const initialState: AssessState = {
   roleCategory: null,
   tasks: [],
   taskWeights: {},
+  confirmedClusterIds: [],
+  aiFamiliarity: 'none',
   riskScore: null,
   scoreBand: null,
   skillGap: null,
@@ -73,7 +78,13 @@ function reducer(state: AssessState, action: Action): AssessState {
         ),
       };
     case 'SUBMIT_WEIGHTS':
-      return { ...state, step: 4, taskWeights: action.weights };
+      return {
+        ...state,
+        step: 4,
+        taskWeights: action.weights,
+        confirmedClusterIds: action.confirmedClusterIds,
+        aiFamiliarity: action.aiFamiliarity,
+      };
     case 'SET_SCORE':
       return {
         ...state,
@@ -82,6 +93,7 @@ function reducer(state: AssessState, action: Action): AssessState {
         scoreBand: action.band,
         skillGap: action.skillGap,
         fallbackUsed: action.fallbackUsed,
+        aiFamiliarity: action.aiFamiliarity,
       };
     case 'ADVANCE_TO_GAP':
       return { ...state, step: 6 };
@@ -104,6 +116,7 @@ interface ScoreApiResponse {
   band: ScoreBand;
   skill_gap: SkillGapResult;
   base_source: 'llm_exposure' | 'role_fallback';
+  ai_familiarity: AiFamiliarity;
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -125,6 +138,8 @@ export default function AssessPage() {
         tasks,
         task_weights: taskWeights,
         role_category: roleCategory,
+        confirmed_cluster_ids: state.confirmedClusterIds,
+        ai_familiarity: state.aiFamiliarity,
       }),
     }).then(async (res) => {
       if (!res.ok) throw new Error(`Score API ${res.status}`);
@@ -142,6 +157,7 @@ export default function AssessPage() {
         band: data.band,
         skillGap: data.skill_gap,
         fallbackUsed: data.base_source === 'role_fallback',
+        aiFamiliarity: data.ai_familiarity ?? 'none',
       });
     } catch (err) {
       console.error('Score calculation failed:', err);
@@ -151,6 +167,7 @@ export default function AssessPage() {
         band: 'MODERATE',
         skillGap: { green: [], red: [] },
         fallbackUsed: true,
+        aiFamiliarity: state.aiFamiliarity,
       });
     }
   }, []);
@@ -199,7 +216,9 @@ export default function AssessPage() {
               tasks={state.tasks}
               weights={state.taskWeights}
               onBack={() => dispatch({ type: 'GO_BACK' })}
-              onSubmit={(weights) => dispatch({ type: 'SUBMIT_WEIGHTS', weights })}
+              onSubmit={(weights, confirmedClusterIds, aiFamiliarity) =>
+                dispatch({ type: 'SUBMIT_WEIGHTS', weights, confirmedClusterIds, aiFamiliarity })
+              }
             />
           </motion.div>
         )}
@@ -261,8 +280,10 @@ export default function AssessPage() {
               socTitle={state.socMatch.title}
               riskScore={state.riskScore}
               scoreBand={state.scoreBand}
+              tasks={state.tasks}
               taskWeights={state.taskWeights}
               skillGap={state.skillGap}
+              aiFamiliarity={state.aiFamiliarity}
               onRoadmapReady={(roadmap) => dispatch({ type: 'SET_ROADMAP', roadmap })}
             />
           </motion.div>

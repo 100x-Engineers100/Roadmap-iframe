@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FunnelShell, funnelStyles } from '@/components/screens/FunnelShell';
 import { useCountUp } from '@/hooks/useCountUp';
 import type { ScoreBand, RoleCategory } from '@/types';
+import styles from './ScoreReveal.module.css';
 
 interface ScoreRevealProps {
   score: number;
@@ -44,8 +46,8 @@ function describeArc(cx: number, cy: number, r: number, startDeg: number, endDeg
   return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
 }
 
-const ARC_SIZE = 220;
-const R = 96;
+const ARC_SIZE = 252;
+const R = 108;
 const CX = ARC_SIZE / 2;
 const CY = ARC_SIZE / 2;
 const ARC_START = -135;
@@ -86,134 +88,134 @@ export function ScoreReveal({ score, band, roleCategory, fallbackUsed, onAdvance
         )}
       </AnimatePresence>
 
-      <div
-        className="min-h-screen flex items-center justify-center px-6 py-12"
-        style={{ background: 'linear-gradient(160deg, #f9f9f9 0%, #f0ece8 100%)' }}
+      <FunnelShell
+        current={3}
+        stepLabel="Step 3 of 5"
+        title="Your AI exposure score"
+        subtitle="The score separates work AI can compress from the judgment, architecture, and operating habits that make you resilient."
+        width="wide"
+        surface={false}
       >
-        {/* Subtle noise texture */}
-        <div
-          aria-hidden
-          style={{
-            position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")`,
-            backgroundRepeat: 'repeat',
-          }}
-        />
+        <div className={styles.scoreLayout}>
 
-        <div className="w-full max-w-[540px] relative z-10">
+          <div className={styles.gaugeColumn}>
+            {/* Arc gauge — explodes in */}
+            <motion.div
+              className="flex justify-center mb-5"
+              initial={{ opacity: 0, scale: 0.65 }}
+              animate={{ opacity: revealed ? 1 : 0, scale: revealed ? 1 : 0.65 }}
+              transition={{ ...SPRING, delay: 0.05 }}
+            >
+              <div style={{ position: 'relative', width: ARC_SIZE, height: ARC_SIZE }}>
+                <svg width={ARC_SIZE} height={ARC_SIZE} style={{ overflow: 'visible' }}>
+                  <defs>
+                    <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="7" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  {/* Track */}
+                  <path
+                    d={describeArc(CX, CY, R, ARC_START, ARC_END)}
+                    fill="none"
+                    stroke="#e2e2e2"
+                    strokeWidth={12}
+                    strokeLinecap="round"
+                  />
+                  {/* Fill arc — FIXED: PATH_LENGTH = actual arc length, not full circle */}
+                  <motion.path
+                    d={describeArc(CX, CY, R, ARC_START, ARC_END)}
+                    fill="none"
+                    stroke={b.color}
+                    strokeWidth={12}
+                    strokeLinecap="round"
+                    filter="url(#arcGlow)"
+                    strokeDasharray={PATH_LENGTH}
+                    initial={{ strokeDashoffset: PATH_LENGTH }}
+                    animate={{
+                      strokeDashoffset: countDone
+                        ? PATH_LENGTH * (1 - score / 100)
+                        : PATH_LENGTH,
+                    }}
+                    transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                  />
+                </svg>
 
-          {/* Arc gauge — explodes in */}
-          <motion.div
-            className="flex justify-center mb-8"
-            initial={{ opacity: 0, scale: 0.65 }}
-            animate={{ opacity: revealed ? 1 : 0, scale: revealed ? 1 : 0.65 }}
-            transition={{ ...SPRING, delay: 0.05 }}
-          >
-            <div style={{ position: 'relative', width: ARC_SIZE, height: ARC_SIZE }}>
-              <svg width={ARC_SIZE} height={ARC_SIZE} style={{ overflow: 'visible' }}>
-                <defs>
-                  <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="7" result="blur" />
-                    <feMerge>
-                      <feMergeNode in="blur" />
-                      <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                  </filter>
-                </defs>
-                {/* Track */}
-                <path
-                  d={describeArc(CX, CY, R, ARC_START, ARC_END)}
-                  fill="none"
-                  stroke="#e2e2e2"
-                  strokeWidth={12}
-                  strokeLinecap="round"
-                />
-                {/* Fill arc — FIXED: PATH_LENGTH = actual arc length, not full circle */}
-                <motion.path
-                  d={describeArc(CX, CY, R, ARC_START, ARC_END)}
-                  fill="none"
-                  stroke={b.color}
-                  strokeWidth={12}
-                  strokeLinecap="round"
-                  filter="url(#arcGlow)"
-                  strokeDasharray={PATH_LENGTH}
-                  initial={{ strokeDashoffset: PATH_LENGTH }}
-                  animate={{
-                    strokeDashoffset: countDone
-                      ? PATH_LENGTH * (1 - score / 100)
-                      : PATH_LENGTH,
-                  }}
-                  transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-                />
-              </svg>
-
-              {/* Score number inside arc */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                  <span style={{
-                    fontFamily: 'var(--font-heading)', fontWeight: 700,
-                    fontSize: 68, lineHeight: 1, color: b.color,
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {displayed}
-                  </span>
-                  <span style={{
-                    fontFamily: 'var(--font-heading)', fontWeight: 700,
-                    fontSize: 34, lineHeight: 1.25, color: b.color,
-                  }}>
-                    %
-                  </span>
+                {/* Score number inside arc */}
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+                    <span style={{
+                      fontFamily: 'var(--font-heading)', fontWeight: 700,
+                      fontSize: 88, lineHeight: 1, color: b.color,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}>
+                      {displayed}
+                    </span>
+                    <span style={{
+                      fontFamily: 'var(--font-heading)', fontWeight: 700,
+                      fontSize: 38, lineHeight: 1.25, color: b.color,
+                    }}>
+                      %
+                    </span>
+                  </div>
+                  {fallbackUsed && (
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: '#8e706a', marginTop: 4 }}>
+                      estimated
+                    </span>
+                  )}
                 </div>
-                {fallbackUsed && (
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: '#8e706a', marginTop: 4 }}>
-                    estimated
-                  </span>
-                )}
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
 
-          {/* Band badge — spring pop */}
-          <motion.div
-            className="flex justify-center mb-7"
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: countDone ? 1 : 0, scale: countDone ? 1 : 0.5 }}
-            transition={{ ...SPRING, delay: 0.08 }}
-          >
-            <span style={{
-              fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 13,
-              letterSpacing: '0.08em', padding: '7px 20px', borderRadius: 5,
-              backgroundColor: b.bg, color: b.textColor,
-              boxShadow: `0 0 0 1.5px ${b.color}44, 0 6px 20px ${b.glow}`,
-            }}>
-              {b.label}
-            </span>
-          </motion.div>
+            {/* Band badge — spring pop */}
+            <motion.div
+              className="flex justify-center"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: countDone ? 1 : 0, scale: countDone ? 1 : 0.5 }}
+              transition={{ ...SPRING, delay: 0.08 }}
+            >
+              <span style={{
+                fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: 13,
+                letterSpacing: '0.08em', padding: '9px 22px', borderRadius: 7,
+                backgroundColor: b.bg, color: b.textColor,
+                border: `2px solid ${b.color}`,
+                boxShadow: `0 0 0 6px ${b.color}12, 0 10px 26px ${b.glow}`,
+                transform: 'rotate(-2deg)',
+                textTransform: 'uppercase',
+              }}>
+                {b.label}
+              </span>
+            </motion.div>
+          </div>
 
-          {/* Role insight — staggered lines */}
-          <motion.div
-            className="text-center mb-8 px-2"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: countDone ? 1 : 0, y: countDone ? 0 : 14 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.22 }}
-          >
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: 17, color: '#1a1c1c', lineHeight: 1.7, marginBottom: 6 }}>
-              {line1}
-            </p>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: 17, color: '#1a1c1c', lineHeight: 1.7 }}>
-              {line2}
-            </p>
-          </motion.div>
+          <div className={styles.detailColumn}>
+            {/* Role insight — staggered lines */}
+            <motion.div
+              className="text-center mb-5 px-2"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: countDone ? 1 : 0, y: countDone ? 0 : 14 }}
+              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.22 }}
+            >
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: '#1a1c1c', lineHeight: 1.55, marginBottom: 5 }}>
+                {line1}
+              </p>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: '#1a1c1c', lineHeight: 1.55 }}>
+                {line2}
+              </p>
+            </motion.div>
 
           {/* Stacked exposure bar */}
           <motion.div
-            className="mb-8"
+            className="mb-5"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: countDone ? 1 : 0, y: countDone ? 0 : 10 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
           >
             <div style={{
-              width: '100%', height: 52, borderRadius: 8,
+              width: '100%', height: 42, borderRadius: 8,
               overflow: 'hidden', display: 'flex',
               boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
             }}>
@@ -241,13 +243,13 @@ export function ScoreReveal({ score, band, roleCategory, fallbackUsed, onAdvance
             animate={{ opacity: countDone ? 1 : 0, y: countDone ? 0 : 10 }}
             transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.58 }}
             style={{
-              textAlign: 'center', marginBottom: 32, padding: '24px 28px',
-              borderRadius: 10, border: '1px solid #e8e2df',
+              textAlign: 'center', marginBottom: 20, padding: '16px 20px',
+              borderRadius: 8, border: '1px solid rgba(226, 191, 183, 0.78)',
               background: '#ffffff',
-              boxShadow: '0 2px 16px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)',
+              boxShadow: '4px 4px 0 rgba(226, 191, 183, 0.34), 0 18px 34px rgba(26, 28, 28, 0.05)',
             }}
           >
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: 16, color: '#5a413b', fontStyle: 'italic', lineHeight: 1.8 }}>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: '#5a413b', fontStyle: 'italic', lineHeight: 1.55 }}>
               But here&apos;s what most risk calculators don&apos;t show you.<br />
               The AI-Native{' '}
               <strong style={{ fontStyle: 'normal', color: b.color }}>{roleName}</strong>{' '}
@@ -257,37 +259,23 @@ export function ScoreReveal({ score, band, roleCategory, fallbackUsed, onAdvance
           </motion.div>
 
           {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: countDone ? 1 : 0, y: countDone ? 0 : 14 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.74 }}
-          >
-            <button
-              onClick={onAdvance}
-              className="w-full active:scale-[0.96]"
-              style={{
-                fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 14,
-                letterSpacing: '0.05em', backgroundColor: '#ff6343',
-                color: '#fff', border: 'none', borderRadius: 8,
-                padding: '20px 24px', cursor: 'pointer',
-                boxShadow: '0 4px 24px rgba(255,99,67,0.38)',
-                transition: 'background-color 0.15s, box-shadow 0.2s, transform 0.1s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#e8502e';
-                e.currentTarget.style.boxShadow = '0 6px 28px rgba(255,99,67,0.48)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#ff6343';
-                e.currentTarget.style.boxShadow = '0 4px 24px rgba(255,99,67,0.38)';
-              }}
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: countDone ? 1 : 0, y: countDone ? 0 : 14 }}
+              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.74 }}
             >
-              SEE WHAT THAT ROLE LOOKS LIKE →
-            </button>
-          </motion.div>
+              <button
+                onClick={onAdvance}
+                className={funnelStyles.primaryButton}
+                type="button"
+              >
+                SEE WHAT THAT ROLE LOOKS LIKE →
+              </button>
+            </motion.div>
+          </div>
 
         </div>
-      </div>
+      </FunnelShell>
     </>
   );
 }

@@ -1,39 +1,62 @@
-import type { CurriculumSkill, RoleCategory, SkillGapResult } from '@/types';
+import type { CurriculumSkill, OnetTask, RoleCategory, SkillGapResult, TaskWeight } from '@/types';
+import { SKILL_CLUSTERS } from '@/data/skill-clusters';
 
-const MAX_SKILLS = 8;
-const MAX_GREEN = 3;
-const MAX_RED = 6;
-const MIN_GREEN = 2;
-const MIN_RED = 5;
+const MODULE_ORDER: Record<string, number> = { m1: 1, m2: 2, m3: 3 };
+
+function wordOverlapScore(clusterText: string, taskText: string): number {
+  if (!taskText) return 0;
+  const clusterWords = new Set(clusterText.toLowerCase().match(/\b\w{3,}\b/g) ?? []);
+  const taskWords = taskText.toLowerCase().match(/\b\w{3,}\b/g) ?? [];
+  return taskWords.filter(w => clusterWords.has(w)).length;
+}
+
+function buildSkillMap(skills: CurriculumSkill[]): Map<string, CurriculumSkill> {
+  return new Map(skills.map(s => [s.id, s]));
+}
+
+function isAdjacentCluster(
+  skillIds: string[],
+  skillMap: Map<string, CurriculumSkill>,
+  role: RoleCategory
+): boolean {
+  return skillIds.some(id => skillMap.get(id)?.roles_adjacent.includes(role) ?? false);
+}
 
 export function inferSkillGap(
   role: RoleCategory,
-  skills: CurriculumSkill[]
+  skills: CurriculumSkill[],
+  confirmedClusterIds: string[],
+  taskWeights: Record<string, TaskWeight>,
+  tasks: OnetTask[]
 ): SkillGapResult {
-  const sorted = [...skills].sort((a, b) => a.seq_order - b.seq_order);
+  const roleClusters = SKILL_CLUSTERS.filter(c => c.roles.includes(role));
+  const confirmedSet = new Set(confirmedClusterIds);
+  const skillMap = buildSkillMap(skills);
 
-  const green: CurriculumSkill[] = [];
-  const red: CurriculumSkill[] = [];
+  const green = roleClusters.filter(c => confirmedSet.has(c.id)).slice(0, 3);
 
-  for (const skill of sorted) {
-    const inAdjacent = skill.roles_adjacent.includes(role);
-    const inPrimary = skill.roles.includes(role);
+  // Build urgency text from high-weight tasks only
+  const taskText = tasks
+    .filter(t => taskWeights[t.id] === 'high')
+    .map(t => t.description)
+    .join(' ');
 
-    if (inAdjacent) {
-      green.push(skill);
-    } else if (inPrimary && !inAdjacent) {
-      red.push(skill);
-    }
-  }
+  const red = roleClusters
+    .filter(c => !confirmedSet.has(c.id))
+    .map(c => ({
+      cluster: c,
+      score: wordOverlapScore(`${c.name} ${c.can_do}`, taskText),
+      adjacent: isAdjacentCluster(c.skill_ids, skillMap, role),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const modDiff = MODULE_ORDER[a.cluster.module] - MODULE_ORDER[b.cluster.module];
+      if (modDiff !== 0) return modDiff;
+      // Within same module: adjacent clusters sort first
+      return (b.adjacent ? 1 : 0) - (a.adjacent ? 1 : 0);
+    })
+    .map(({ cluster }) => cluster)
+    .slice(0, 6);
 
-  // Trim to spec: 2-3 green, 5-6 red, max 8 total
-  const trimmedGreen = green.slice(0, MAX_GREEN);
-  const trimmedRed = red.slice(0, MAX_RED);
-
-  // Ensure minimums are met if data exists
-  const finalGreen = trimmedGreen.slice(0, Math.max(MIN_GREEN, trimmedGreen.length));
-  const remaining = MAX_SKILLS - finalGreen.length;
-  const finalRed = trimmedRed.slice(0, Math.min(remaining, Math.max(MIN_RED, trimmedRed.length)));
-
-  return { green: finalGreen, red: finalRed };
+  return { green, red };
 }

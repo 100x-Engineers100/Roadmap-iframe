@@ -1,157 +1,100 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-
-const GRID_BG = `
-  linear-gradient(rgba(26,28,28,0.04) 1px, transparent 1px),
-  linear-gradient(90deg, rgba(26,28,28,0.04) 1px, transparent 1px),
-  #f9f9f9
-`.trim();
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRight } from 'lucide-react';
+import styles from './Home.module.css';
 
 const container = {
   hidden: {},
   show: {
-    transition: { staggerChildren: 0.15 },
+    transition: { staggerChildren: 0.08 },
   },
 };
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } },
 };
+
+const proofItems = [
+  { value: 'O*NET', label: 'task basis' },
+  { value: '4-factor', label: 'risk model' },
+  { value: '90-day', label: 'upgrade map' },
+];
+
+const heroVideoUrl = 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4';
 
 export default function Home() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
+  const goToAssess = () => router.push('/assess');
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center px-6"
-      style={{
-        background: GRID_BG,
-        backgroundSize: '24px 24px',
-      }}
-    >
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="flex flex-col items-center text-center w-full max-w-[680px]"
-        style={{ gap: 0 }}
-      >
-        {/* Headline */}
-        <motion.h1
-          variants={fadeUp}
-          style={{
-            fontFamily: 'var(--font-heading)',
-            fontWeight: 700,
-            lineHeight: 1.1,
-            letterSpacing: '-0.02em',
-            color: '#1a1c1c',
-            marginBottom: 24,
-          }}
-          className="text-[40px] md:text-[64px]"
-        >
-          What is your job worth in{' '}
-          <span style={{ color: '#b22c11' }}>5 years</span>?
-        </motion.h1>
+    <main className={styles.page}>
+      <section className={styles.hero}>
+        <div className={styles.leftPane}>
+          <header className={styles.leftNav}>
+            <div className={styles.brand}>
+              <strong>100x</strong>
+            </div>
+            <button className={styles.navCta} type="button" onClick={goToAssess}>
+              <span>Start scan</span>
+              <ArrowRight size={13} aria-hidden="true" />
+            </button>
+          </header>
 
-        {/* Subheadline */}
-        <motion.p
-          variants={fadeUp}
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 18,
-            fontWeight: 400,
-            color: '#5a413b',
-            lineHeight: 1.6,
-            marginBottom: 32,
-            maxWidth: 520,
-          }}
-        >
-          Find out using the same methodology economists use
-          <br className="hidden sm:block" />
-          to measure AI displacement risk.
-        </motion.p>
-
-        {/* CTA */}
-        <motion.div variants={fadeUp} style={{ marginBottom: 48, width: '100%' }}>
-          <motion.button
-            onClick={() => router.push('/assess')}
-            animate={{ scale: [1, 1.015, 1] }}
-            transition={{
-              duration: 0.8,
-              repeat: Infinity,
-              repeatDelay: 4.2,
-              ease: 'easeInOut',
-            }}
-            className="w-full sm:w-auto rounded-[4px] active:scale-[0.96]"
-            style={{
-              background: '#ff6343',
-              color: 'white',
-              fontFamily: 'var(--font-heading)',
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              height: 56,
-              paddingLeft: 52,
-              paddingRight: 52,
-              cursor: 'pointer',
-              border: 'none',
-              borderRadius: 8,
-              boxShadow: '0 4px 24px rgba(255,99,67,0.36)',
-              transition: 'background-color 0.15s, box-shadow 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#e8502e';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 28px rgba(255,99,67,0.46)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#ff6343';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 24px rgba(255,99,67,0.36)';
-            }}
-
+          <motion.div
+            className={styles.copy}
+            variants={container}
+            initial="hidden"
+            animate="show"
           >
-            Calculate My Risk Score →
-          </motion.button>
-        </motion.div>
+            <motion.h1 variants={fadeUp}>
+              What is your job worth in <span>5 years</span>?
+            </motion.h1>
 
-        {/* Credibility bar */}
+            <motion.p className={styles.lede} variants={fadeUp}>
+              Get a role-specific risk score, the skills that change it, and a 90-day AI-native roadmap built around real work tasks.
+            </motion.p>
+
+            <motion.div className={styles.actionRow} variants={fadeUp}>
+              <button className={styles.primaryCta} type="button" onClick={goToAssess}>
+                <span>Calculate my risk score</span>
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
+              <span className={styles.timeNote}>Takes under 2 minutes</span>
+            </motion.div>
+
+            <motion.div className={styles.proofGrid} variants={fadeUp}>
+              {proofItems.map((item) => (
+                <div className={styles.proofItem} key={item.value}>
+                  <strong>{item.value}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+
         <motion.div
-          variants={fadeUp}
-          className="flex items-center justify-center flex-wrap"
-          style={{ gap: 0 }}
+          className={styles.videoPanel}
+          initial={{ opacity: 0, x: reduceMotion ? 0 : 22 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+          aria-label="AI risk scanner video preview"
         >
-          {['O*NET', 'STANFORD HAI 2026', 'WEF Future of Jobs'].map((label, i) => (
-            <span key={label} className="flex items-center">
-              {i > 0 && (
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 1,
-                    height: 14,
-                    background: '#e2e2e2',
-                    margin: '0 16px',
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  fontFamily: 'var(--font-heading)',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(95,94,94,0.8)',
-                }}
-              >
-                {label}
-              </span>
-            </span>
-          ))}
+          <video
+            className={styles.heroVideo}
+            src={heroVideoUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+          />
         </motion.div>
-      </motion.div>
+      </section>
     </main>
   );
 }
