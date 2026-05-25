@@ -1,5 +1,6 @@
 # secrets & credentials
 *.json
+.claude/
 !web/package.json
 !web/tsconfig.json
 .env
@@ -15,12 +16,19 @@ MASTER_SPEC.md
 old - roadmap_design.md
 old - roadmap-implementation-plan.md
 PRD_AI_Risk_Tool.md
+PRD_Risk_Calculator_Roadmap.md
 PROGRESS.md
 roadmap-deign.md
 roadmap-preview.html
+old-roadmap-preview.html
+UI_OVERHAUL_PLAN.md
+SATURDAY_TODO.md
+ROADMAP_FIX_SPEC.md
 WhatsApp Image 2026-05-06 at 10.16.01 PM.jpeg
 ss/
-docs/superpowers/plans/
+docs/
+test output/
+*.code-workspace
 
 # Next.js
 web/.next/
