@@ -7,3 +7,29 @@
 - Reminder emails are relative to roadmap creation time, not fixed weekdays: send first reminder after 3 days and second after 6 days so the copy can reference progress since generation.
 - Zeno retrieval should use the wiki index as the routing map first, then fetch relevant evidence. Do not hardcode a tiny evidence-page cap that risks half-baked curriculum coverage; cap by prompt budget and relevance instead.
 - Roadmap pivot: main roadmap canvas shows only 3 phases with 2-3 clickable top-level nodes each, as circle plus compact tile labels on a snake spine. Project checkpoints and subnodes appear only inside the clicked node side panel as a static expanded mini-spine; do not render checkpoints as main-canvas nodes.
+- UI overhaul: treat `design.md` as color/style reference, not exact font contract. Use Space Grotesk and JetBrains Mono as the product fonts for the 100x light coral theme.
+- UI overhaul MVP is desktop-first. Mobile roadmap should become a horizontal poster-style experience later in v2, not in the first desktop MVP pass.
+- Roadmap side panel is critical: when a main node is clicked, the panel starts with only that selected node expanded into left/right static subtopic pills connected by branch lines to a central node badge, using `old-roadmap-preview.html` as the local expansion reference.
+- Stage 3 correction: `NodeExpansionMap.tsx` and `RoadmapView.module.css` must use matching class names; otherwise the selected-node concept map degrades into scattered pills with weak connector attachment.
+- Stage 3 correction: project nodes are visible top-level roadmap nodes with distinct treatment; step-level checkpoint details still belong inside the selected-node panel.
+- Stage 3 correction: glossary/key terms are out-of-band roadmap utilities, not main-canvas nodes. Derive terms from roadmap data when explicit glossary terms are missing.
+- Stage 3 feedback pass: keep the glossary trigger left-aligned and curved, keep project-node dots coral while still visually distinct, and make the topbar 100x CTA rounded/sleek without changing unresolved global typography.
+- Stage 3 feedback pass: project-node dots should still show the roadmap number; put the project/build icon in the tile side pill and avoid labeling tiles as "Project node".
+- Stage 3 feedback pass: keep left/right roadmap tiles at a uniform gap from their node dots and keep leader-line length/opacity strong enough to visibly attach tile to node. Check node 1 against node 4 after any placement change.
+- Stage 4 funnel pass: reuse one shared `FunnelShell` for the assessment screens so the grid background, topbar, progress, surface, and primary CTA stay consistent with the roadmap theme.
+- Typography decision resolved by user: Space Grotesk is the 100x theme font for this product. Keep global font usage on Space Grotesk plus JetBrains Mono support unless the user changes direction.
+- Home direction: use a desktop 50/50 hero with left-side risk copy and a full-height looping MP4 panel on the right, while preserving the light 100x coral/onEdex grid theme. Remove the old live-role scanner card from the home hero unless the video fit fails.
+- Home video hero correction: keep the desktop home page to one viewport with no vertical scroll. Use a lean floating pill nav, tighter headline/subtext/proof spacing, and crop the MP4 with `object-fit: cover` instead of letting the hero exceed viewport height.
+- Home nav experiment: user asked to try removing the home navbar entirely. Keep the primary assessment CTA inside the hero so the page can remain clean while still actionable; this can be reverted if the user dislikes the result.
+- Home nav follow-up: use a very slim square-edged nav only in the left 50% pane, not over the video. Keep hero copy left-oriented inside that pane to reduce the dead gap before the split.
+- Home copy correction: remove the `AI displacement forecast` eyebrow/pill entirely from the hero when using the left-only nav layout.
+- Home left nav correction: keep the nav strip square-edged, but the small `Start scan` button should have rounded pill corners.
+- Home brand correction: left-only nav brand should read only `100x`, set large and very bold in the product Space Grotesk heading font.
+- Home video correction: do not add edge glow or color overlay on the right video panel; let the MP4 render cleanly inside the 50% split.
+- Home nav visual correction: left-only nav should share the subtle coral grid/noise treatment from the page, not appear as a flat white strip.
+- Favicon correction: use the real `icon.jpg` 100x coral mark directly through Next metadata; do not keep a generated SVG fallback when the source image exists.
+- Home video correction: do not add edge glow or color overlay on the right video panel; let the MP4 render cleanly inside the 50% split.
+- Role input correction: keep the first `/assess` input narrower and clean, but preserve the search icon. Use explicit left padding so the icon never overlaps placeholder text, plus a subtle coral focus ring and compact outer surface.
+- Role match correction: action buttons under the matched role should stay compact because the labels are short. Alternative rows need left padding plus separated title and SOC code chip so the radio control, role name, and code do not crowd each other.
+- Alternatives drawer correction: verify with realistic long role names such as "Mechanical Engineers". Rows should have enough left inset from the drawer border, visible radio-to-title gap, and a separated SOC chip so text does not read as one cramped string.
+- Roadmap spine correction: desktop route must be generated from actual node count, not the full 9-node route. For 5-6 nodes use a two-row snake and stop at the final node; for 7-9 nodes continue only until the last placed node, then show the separate `AI-updated` stamp.

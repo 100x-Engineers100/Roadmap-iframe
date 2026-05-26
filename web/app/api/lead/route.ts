@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateRoadmap } from '@/lib/llm/roadmap-gen';
+
+export const dynamic = 'force-dynamic';
 import { insertLead } from '@/lib/db/leads';
 import type { AiFamiliarity, RoleCategory, ScoreBand, SkillCluster, TaskWeight } from '@/types';
 

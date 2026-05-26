@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateScore } from '@/lib/score/calculator';
+
+export const dynamic = 'force-dynamic';
 import { getAllSkills } from '@/lib/db/curriculum';
 import { inferSkillGap } from '@/lib/skill-gap/inference';
 import { SKILL_CLUSTERS } from '@/data/skill-clusters';

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { socMatch } from '@/lib/llm/soc-match';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let body: unknown;
   try {

@@ -12,7 +12,6 @@ const ROLE_DISPLAY: Record<RoleCategory, string> = {
 
 const BANNED_CANVAS_TERMS = ['RAG', 'MCP', 'ReAct', 'API', 'LLM', 'SPAORL', 'BM25'];
 
-// Per-role tool and language constraints fed into the LLM prompt
 const ROLE_LANG_RULES: Record<RoleCategory, string> = {
   engineer: 'Technical depth expected. Name APIs, frameworks, and code tools explicitly. Exercises may require writing code.',
   pm: 'Business context + light technical literacy. Tools: Claude, Notion AI, Linear AI, Figma AI, ChatGPT. Exercises are workflow-level, not code-level.',
@@ -22,7 +21,6 @@ const ROLE_LANG_RULES: Record<RoleCategory, string> = {
   student: 'Accessible language. Tools: ChatGPT, Claude, Perplexity, Notion AI, Gamma. Build conceptual understanding before specialization. No code unless natural.',
 };
 
-// Tone instruction based on how long user has used AI
 const FAMILIARITY_TONE: Record<AiFamiliarity, string> = {
   none: 'User is new to AI tools. Step 1 must be immediately actionable — things they can try today with zero setup. Use plain English throughout. Avoid jargon. Build confidence before complexity.',
   casual: 'User has used tools like ChatGPT casually for 1–6 months. Build from what they already do. Introduce intentional workflows and role-specific patterns. Bridge casual use to deliberate daily practice.',
@@ -39,7 +37,6 @@ Critical structure:
 - Include 1-3 project nodes (node_kind: "project") for visible build moments.
 - Each top-level node has 3-4 static subnodes shown inside the side panel.
 - Top-level node names: plain English, 2-4 words, no acronyms, no jargon.
-- Glossary: out-of-band key terms only. Never make a glossary term a roadmap node.
 - skill_ids: populate with cluster IDs (e.g. "C2B") from the gap clusters each node addresses.
 
 SUBNODE RULES (non-negotiable):
@@ -59,6 +56,15 @@ LANGUAGE RULES:
 - Non-engineering roles (designer, marketer, sales, pm, student): node names and subnode titles must be understandable to someone with no technical background. No code terms in titles.
 - All roles: one_line_desc must explain what the person gains in their real work — not what the technology does.
 - All roles: glossary terms must define AI concepts in the language of this role's daily work.
+
+GLOSSARY RULES (non-negotiable):
+- Include 3-6 terms from THIS roadmap's content that a non-technical person would not understand.
+- Pull terms only from node names, subnode titles, and descriptions actually generated above.
+- Define each term in 1 sentence using the role's daily work language — no technical jargon in the definition.
+- Engineer examples: API (a connection point that lets two software tools talk to each other), RAG (giving AI instant access to your documents so it can answer questions from them), fine-tuning (training an AI model on your specific data to improve its accuracy for your use case), CLI (a text-based terminal interface for running commands).
+- Marketer examples: Prompt (the instruction you type to tell an AI tool what to do), AI agent (an AI that completes a multi-step task automatically without you clicking through each step), automation trigger (the event — like a form submission or new email — that starts a workflow running).
+- NEVER leave glossary as empty array []. Minimum 3 terms always.
+- NEVER define terms that did not appear in the roadmap content.
 
 The JSON must match this TypeScript type exactly:
 
@@ -114,9 +120,251 @@ interface RoadmapGlossaryTerm {
   group?: string;
 }`;
 
+// ── Fallback node specs per cluster ─────────────────────────────────────────
+
+interface ClusterFallbackSpec {
+  name: string;
+  tools: string[];
+  depth: Difficulty;
+}
+
+const CLUSTER_FALLBACK_NODES: Record<string, ClusterFallbackSpec> = {
+  C1A: { name: 'Create AI-generated content', tools: ['Canva AI', 'Midjourney', 'HeyGen'], depth: 'foundational' },
+  C2A: { name: 'Automate your top weekly task', tools: ['ChatGPT', 'Notion AI', 'Zapier'], depth: 'intermediate' },
+  C2B: { name: 'Wire your first AI integration', tools: ['FastAPI', 'Claude API', 'Supabase'], depth: 'intermediate' },
+  C2C: { name: 'Build a document search tool', tools: ['Supabase', 'Claude API', 'Pinecone'], depth: 'intermediate' },
+  C2D: { name: 'Fine-tune a model on your data', tools: ['OpenAI fine-tuning', 'Python', 'W&B'], depth: 'intermediate' },
+  C3A: { name: 'Build an autonomous AI agent', tools: ['LangChain', 'Claude API', 'n8n'], depth: 'advanced' },
+  C3B: { name: 'Automate an end-to-end workflow', tools: ['n8n', 'Zapier', 'Claude API'], depth: 'advanced' },
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function formatCluster(c: SkillCluster): string {
   return `  [${c.id}] ${c.name}\n    Benefit: ${c.can_do}\n    Project: ${c.checkpoint_hint}`;
 }
+
+function buildClusterNode(cluster: SkillCluster, role: string): RoadmapNode {
+  const spec = CLUSTER_FALLBACK_NODES[cluster.id];
+  const tools = spec?.tools ?? ['ChatGPT'];
+  const name = spec?.name ?? cluster.name;
+  const depth = spec?.depth ?? 'intermediate';
+  const nodeId = cluster.id.toLowerCase();
+
+  return {
+    id: nodeId,
+    node_kind: 'concept',
+    name_plain: name,
+    one_line_desc: cluster.can_do,
+    what_covers: cluster.checkpoint_hint,
+    what_do_after: cluster.checkpoint_hint,
+    subnodes: [
+      {
+        id: `${nodeId}-s1`,
+        title: `Set up ${tools[0]}`,
+        description: `Configure ${tools[0]} for your ${role} work and run one test task to confirm it works.`,
+        outcome: `A confirmed ${tools[0]} setup producing real output.`,
+        tools: [tools[0]],
+        time_est: '45 min',
+      },
+      {
+        id: `${nodeId}-s2`,
+        title: `Build your first ${name.toLowerCase()} exercise`,
+        description: `Use ${tools.slice(0, 2).join(' and ')} to complete one real task from your daily work.`,
+        outcome: `A completed exercise you can demonstrate to others.`,
+        tools: tools.slice(0, 2),
+        time_est: '1-2 hrs',
+      },
+      {
+        id: `${nodeId}-s3`,
+        title: `Ship the checkpoint deliverable`,
+        description: `Deliver the project: ${cluster.checkpoint_hint}`,
+        outcome: cluster.checkpoint_hint,
+        tools: tools,
+        time_est: '2-3 hrs',
+      },
+    ],
+    concepts_left: ['Setup', 'Core exercise', 'Checkpoint'],
+    concepts_right: ['Configure', 'Execute', 'Deliver'],
+    skill_ids: [cluster.id],
+    analogy: {
+      base: `Building ${name.toLowerCase()} as a repeatable skill`,
+      role_skin: `Applying it directly to your ${role} daily work`,
+      bridge_line: `One complete exercise with a real deliverable is worth more than ten tutorials.`,
+    },
+    depth,
+  };
+}
+
+function buildGenericRepairNode(id: string, role: string): RoadmapNode {
+  return {
+    id,
+    node_kind: 'concept',
+    name_plain: 'Practice and Apply',
+    one_line_desc: `Apply what you have learned to a real task from your ${role} work.`,
+    what_covers: 'Consolidating skills through direct application',
+    what_do_after: 'Complete one real deliverable using the skills from this step.',
+    subnodes: [
+      { id: `${id}-s1`, title: 'Pick one real task', description: 'Choose a recurring task from your role and plan how AI can help.', outcome: 'A task selected with a clear AI-assist plan.', tools: ['ChatGPT'], time_est: '30 min' },
+      { id: `${id}-s2`, title: 'Execute with AI support', description: 'Complete the task using the AI tools from this step.', outcome: 'A finished work output.', tools: ['ChatGPT'], time_est: '1 hr' },
+      { id: `${id}-s3`, title: 'Document the workflow', description: 'Write down the steps so you can repeat this without starting from scratch.', outcome: 'A one-page workflow note for future reuse.', tools: ['Notion'], time_est: '30 min' },
+    ],
+    concepts_left: ['Select', 'Execute', 'Document'],
+    concepts_right: ['Plan', 'Produce', 'Reuse'],
+    skill_ids: [],
+    analogy: {
+      base: 'Consolidating practice into a repeatable system',
+      role_skin: `Making ${role} work faster through documented AI patterns`,
+      bridge_line: 'Documenting while fresh is what separates a one-time win from a lasting workflow.',
+    },
+    depth: 'foundational',
+  };
+}
+
+function buildStepCheckpoint(stepLabel: string, clusters: SkillCluster[], role: string): RoadmapStep['checkpoint'] {
+  const clusterNames = clusters.map(c => c.name).join(', ') || `${role} AI skills`;
+  return {
+    title: `${role} AI Sprint — ${stepLabel}`,
+    goal: `Prove you can apply: ${clusterNames}`,
+    concepts: clusters.map(c => c.name),
+    problem_statement: `Build a real deliverable using ${clusterNames} in your ${role} work context.`,
+    done_criteria: clusters.length > 0
+      ? clusters[0].checkpoint_hint
+      : `A completed project that demonstrates AI-native ${role} output.`,
+    time_est: '3-4 hrs',
+  };
+}
+
+// ── Cluster-aware fallback ───────────────────────────────────────────────────
+
+function buildFallback(roleCategory: RoleCategory, gapClusters: SkillCluster[] = []): Roadmap {
+  const role = ROLE_DISPLAY[roleCategory];
+
+  const m1 = gapClusters.filter(c => c.module === 'm1');
+  const m2 = gapClusters.filter(c => c.module === 'm2');
+  const m3 = gapClusters.filter(c => c.module === 'm3');
+
+  // Zero m1 clusters (e.g. engineer): seed step1 with first 2 m2
+  const step1Clusters = m1.length > 0 ? m1.slice(0, 2) : m2.slice(0, 2);
+  const step2Clusters = m1.length > 0 ? m2.slice(0, 2) : m2.slice(2, 4);
+  const step3Clusters = m3.slice(0, 2);
+
+  function buildStepNodes(clusters: SkillCluster[]): RoadmapNode[] {
+    const nodes = clusters.slice(0, 3).map(c => buildClusterNode(c, role));
+    while (nodes.length < 2) {
+      nodes.push(buildGenericRepairNode(`repair-${roleCategory}-${nodes.length}`, role));
+    }
+    return nodes;
+  }
+
+  const step1: RoadmapStep = {
+    label: 'STEP 1 - DAYS 1-30',
+    theme: 'Foundation',
+    nodes: buildStepNodes(step1Clusters),
+    checkpoint: buildStepCheckpoint('Foundation', step1Clusters, role),
+  };
+
+  const step2: RoadmapStep = {
+    label: 'STEP 2 - DAYS 31-60',
+    theme: 'Applied Workflows',
+    nodes: buildStepNodes(step2Clusters),
+    checkpoint: buildStepCheckpoint('Applied Workflows', step2Clusters, role),
+  };
+
+  const step3: RoadmapStep = {
+    label: 'STEP 3 - DAYS 61-90',
+    theme: 'Build and Ship',
+    nodes: buildStepNodes(step3Clusters),
+    checkpoint: buildStepCheckpoint('Build and Ship', step3Clusters, role),
+  };
+
+  // Role-specific glossary defaults so glossary is never empty
+  const defaultGlossary = roleCategory === 'engineer'
+    ? [
+        { term: 'API', definition: 'A connection point that lets two software tools talk to each other and share data.' },
+        { term: 'Claude API', definition: 'Anthropic\'s AI interface that lets you send instructions to Claude and receive AI-generated responses in your own product.' },
+        { term: 'Fine-tuning', definition: 'Training an AI model on your specific data so it produces better results for your particular use case.' },
+      ]
+    : [
+        { term: 'Prompt', definition: 'The instruction you type to tell an AI tool what to do.' },
+        { term: 'AI agent', definition: 'An AI that completes a multi-step task automatically without you clicking through each step.' },
+        { term: 'Automation trigger', definition: 'The event — like a form submission or a new email — that starts a workflow running automatically.' },
+      ];
+
+  return { step1, step2, step3, glossary: defaultGlossary };
+}
+
+// ── Repair logic (replaces throw-based validateRoadmap) ──────────────────────
+
+function repairNode(node: RoadmapNode, role: string): void {
+  // Sanitize banned terms — do NOT reject the node
+  for (const term of BANNED_CANVAS_TERMS) {
+    if (node.name_plain.includes(term)) {
+      node.name_plain = node.name_plain.replace(new RegExp(`\\b${term}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
+      console.warn(JSON.stringify({ event: 'roadmap_repair', issue: 'banned_term_sanitized', term, node_id: node.id }));
+    }
+  }
+
+  if (!node.name_plain) node.name_plain = 'Apply AI skills';
+
+  if (!Array.isArray(node.subnodes)) node.subnodes = [];
+
+  // Trim excess subnodes
+  if (node.subnodes.length > 4) node.subnodes = node.subnodes.slice(0, 4);
+
+  // Pad missing subnodes
+  while (node.subnodes.length < 3) {
+    const idx = node.subnodes.length + 1;
+    node.subnodes.push({
+      id: `${node.id}-repair-${idx}`,
+      title: `Apply ${node.name_plain} to your work`,
+      description: `Practice this skill on a real task from your ${role} work.`,
+      outcome: 'A completed exercise you can add to your portfolio.',
+      tools: ['ChatGPT'],
+      time_est: '30 min',
+    });
+    console.warn(JSON.stringify({ event: 'roadmap_repair', issue: 'subnode_padded', node_id: node.id }));
+  }
+
+  // Apply tools/time_est defaults to all subnodes
+  node.subnodes = node.subnodes.map(s => ({ tools: [], time_est: '', ...s }));
+}
+
+function repairRoadmap(roadmap: Roadmap, gapClusters: SkillCluster[], role: string): Roadmap {
+  const stepKeys: (keyof Roadmap)[] = ['step1', 'step2', 'step3'];
+
+  for (let i = 0; i < stepKeys.length; i++) {
+    const step = roadmap[stepKeys[i]] as RoadmapStep;
+
+    if (!Array.isArray(step?.nodes)) step.nodes = [];
+
+    // Trim excess nodes
+    if (step.nodes.length > 3) step.nodes = step.nodes.slice(0, 3);
+
+    // Repair each node
+    for (const node of step.nodes) repairNode(node, role);
+
+    // Pad missing nodes using cluster data
+    if (step.nodes.length < 2) {
+      const usedIds = new Set(step.nodes.flatMap(n => n.skill_ids));
+      const candidate = gapClusters.find(c => !usedIds.has(c.id));
+      const repairNode_ = candidate
+        ? buildClusterNode(candidate, role)
+        : buildGenericRepairNode(`repair-step${i + 1}-n2`, role);
+      step.nodes.push(repairNode_);
+      console.warn(JSON.stringify({ event: 'roadmap_repair', issue: 'node_padded', step: i + 1 }));
+    }
+  }
+
+  // Ensure glossary is not empty
+  if (!Array.isArray(roadmap.glossary) || roadmap.glossary.length === 0) {
+    roadmap.glossary = [];
+  }
+
+  return roadmap;
+}
+
+// ── Prompt builders ──────────────────────────────────────────────────────────
 
 function buildUserPrompt(
   roleCategory: RoleCategory,
@@ -132,6 +380,10 @@ function buildUserPrompt(
   const m1 = gapClusters.filter(c => c.module === 'm1');
   const m2 = gapClusters.filter(c => c.module === 'm2');
   const m3 = gapClusters.filter(c => c.module === 'm3');
+
+  // Zero m1 fix: engineer has no m1 clusters — seed step1 with first 2 m2 as foundation
+  const m1Effective = m1.length > 0 ? m1 : m2.slice(0, 2);
+  const m2Effective = m1.length > 0 ? m2 : m2.slice(2);
 
   const taskSection = topTasks.length > 0
     ? `\nHigh-weight daily tasks (what this person actually does):\n${topTasks.map(t => `  - ${t}`).join('\n')}`
@@ -155,9 +407,9 @@ ${taskSection}${haveSection}
 
 SKILL CLUSTERS to close (each roadmap node MUST address at least one):
 
-${stepBlock('STEP 1 — Foundation (Days 1-30)', m1, 'build foundational AI skills for this role')}
+${stepBlock('STEP 1 — Foundation (Days 1-30)', m1Effective, 'build foundational AI skills for this role')}
 
-${stepBlock('STEP 2 — Applied Workflows (Days 31-60)', m2, 'build applied workflow skills for this role')}
+${stepBlock('STEP 2 — Applied Workflows (Days 31-60)', m2Effective, 'build applied workflow skills for this role')}
 
 ${stepBlock('STEP 3 — Build and Ship (Days 61-90)', m3, 'capstone: demonstrate AI-native work for this role')}
 
@@ -170,197 +422,7 @@ Rules:
 Return only the JSON object.`;
 }
 
-function makeNode(
-  id: string,
-  name: string,
-  desc: string,
-  covers: string,
-  after: string,
-  subnodes: RoadmapNode['subnodes'],
-  depth: Difficulty,
-  role: string,
-  nodeKind: RoadmapNode['node_kind'] = 'concept'
-): RoadmapNode {
-  return {
-    id,
-    node_kind: nodeKind,
-    name_plain: name,
-    one_line_desc: desc,
-    what_covers: covers,
-    what_do_after: after,
-    subnodes: subnodes.map(s => ({ tools: [], time_est: '', ...s })),
-    concepts_left: ['Input quality', 'Context control', 'Review standards'],
-    concepts_right: ['Write a reusable brief', 'Run a guided work session', 'Improve the final output'],
-    skill_ids: [],
-    analogy: {
-      base: 'Moving from random effort to a repeatable operating system',
-      role_skin: `Turning everyday ${role} work into a guided AI-supported workflow`,
-      bridge_line: 'The value is not one clever prompt — it is a system that makes every task start from a better baseline.',
-    },
-    depth,
-  };
-}
-
-function buildFallback(roleCategory: RoleCategory): Roadmap {
-  const role = ROLE_DISPLAY[roleCategory];
-
-  const step1: RoadmapStep = {
-    label: 'STEP 1 - DAYS 1-30',
-    theme: 'Operator Foundation',
-    nodes: [
-      makeNode(
-        'n1', 'Clear Instructions',
-        'Get consistent, useful results from any AI tool by giving it the right context.',
-        'Goal framing, constraints, examples, and review criteria. Turning vague requests into structured work instructions.',
-        'You will write reusable instruction templates for your top daily tasks.',
-        [
-          { id: 'n1-s1', title: 'Write your first AI brief', description: 'Use ChatGPT or Claude to tackle one real task from your day using a structured goal + context + constraint format.', outcome: 'A completed work task and a saved prompt template.', tools: ['ChatGPT', 'Claude'], time_est: '45 min' },
-          { id: 'n1-s2', title: 'Add useful context to your prompts', description: 'Improve the same prompt by adding audience, tone, examples, and format requirements. Compare the outputs.', outcome: 'A before/after prompt pair showing how context changes the result.', tools: ['ChatGPT'], time_est: '30 min' },
-          { id: 'n1-s3', title: 'Build a personal prompt library', description: 'Save your 5 best prompts in Notion or a document with labels for when to use each one.', outcome: 'A reusable prompt library for your top 5 work tasks.', tools: ['Notion', 'ChatGPT'], time_est: '1 hr' },
-        ],
-        'foundational', role
-      ),
-      makeNode(
-        'n2', 'Tool Selection',
-        'Stop using one AI tool for everything — match the tool to the task.',
-        'When to use chat, document analysis, image generation, search, and workflow tools. Choosing the right tool over forcing a single tool everywhere.',
-        'You will have a task-to-tool map for your role.',
-        [
-          { id: 'n2-s1', title: 'List your repeating tasks', description: 'Write down the 10 tasks you do every week that follow a recognizable pattern.', outcome: 'A ranked list of your top automation and AI-assist candidates.', tools: ['Notion', 'ChatGPT'], time_est: '30 min' },
-          { id: 'n2-s2', title: 'Map tasks to AI tools', description: 'For each task, choose the tool category that fits: chat, search, image, automation, or document AI.', outcome: 'A task-to-tool map specific to your role.', tools: ['Notion'], time_est: '45 min' },
-          { id: 'n2-s3', title: 'Test one tool per task', description: 'Run each mapped tool against a real version of that task and document what worked and what did not.', outcome: 'A tested toolkit with notes on each tool\'s strengths for your role.', tools: ['ChatGPT', 'Notion AI', 'Perplexity'], time_est: '1-2 hrs' },
-        ],
-        'foundational', role
-      ),
-    ],
-    checkpoint: {
-      title: 'AI-Augmented Workday Sprint',
-      goal: 'Run one real workday with AI support on every repeatable task.',
-      concepts: ['Task mapping', 'Prompt quality', 'Output review'],
-      problem_statement: 'Your day has repeated tasks that drain time without improving your judgment. Build a setup that handles the busywork while keeping you in control.',
-      done_criteria: 'A before-and-after work sample for one full day: same tasks, AI-supported, with a written note on what improved.',
-      time_est: '3-4 hrs',
-    },
-  };
-
-  const step2: RoadmapStep = {
-    label: 'STEP 2 - DAYS 31-60',
-    theme: 'Role Workflows',
-    nodes: [
-      makeNode(
-        'n3', 'Workflow Design',
-        `Build a repeatable, AI-supported workflow for your most important ${role} tasks.`,
-        'Turning one-off tool use into a reliable sequence: inputs, transformation steps, review gates, final handoff.',
-        'You will have a reusable workflow for your highest-value role task.',
-        [
-          { id: 'n3-s1', title: 'Pick one high-value task', description: 'Choose a task with clear inputs and a valuable output that you repeat at least weekly.', outcome: 'One workflow target with a written success definition.', tools: ['Notion'], time_est: '30 min' },
-          { id: 'n3-s2', title: 'Map the task into steps', description: 'Break the task into: collect, think, draft, review. Write each step down with the AI role in each.', outcome: 'A visible workflow skeleton you can follow and improve.', tools: ['Notion', 'ChatGPT'], time_est: '1 hr' },
-          { id: 'n3-s3', title: 'Add review gates', description: 'Decide where a human check must happen before the output moves forward. Mark these as mandatory stops.', outcome: 'A safer workflow with review checkpoints built in.', tools: ['Notion'], time_est: '30 min' },
-        ],
-        'intermediate', role
-      ),
-      makeNode(
-        'n4', 'Quality Control',
-        'Learn to judge AI-assisted work before it leaves your hands.',
-        'Fact-checking, format consistency, tone matching, and business usefulness. Professional-grade output, not just fast first drafts.',
-        'You will review AI-assisted work against a clear quality standard before using it.',
-        [
-          { id: 'n4-s1', title: 'Create a quality rubric', description: 'Write down what "good" looks like for one specific AI output type in your role. Be specific about format, tone, and accuracy.', outcome: 'A personal quality rubric for your most common AI-assisted task.', tools: ['Notion'], time_est: '30 min' },
-          { id: 'n4-s2', title: 'Run a structured review pass', description: 'Take an AI-generated output and go through your rubric item by item. Mark what passes and what needs work.', outcome: 'A marked-up review showing where AI output falls short for your standards.', tools: ['ChatGPT', 'Notion'], time_est: '45 min' },
-          { id: 'n4-s3', title: 'Improve one output to final quality', description: 'Take the reviewed draft and raise it to the standard you would actually use or send.', outcome: 'A polished final version with a note on what required human judgment.', tools: ['ChatGPT', 'Claude'], time_est: '1 hr' },
-        ],
-        'intermediate', role
-      ),
-    ],
-    checkpoint: {
-      title: 'Reusable Workflow Document',
-      goal: `Document one repeatable AI-supported ${role} workflow another person could follow.`,
-      concepts: ['Workflow sequence', 'Human review gates', 'Reusable templates'],
-      problem_statement: 'Your team keeps recreating similar work from scratch. Build a workflow that is clear enough for someone else to follow and trust.',
-      done_criteria: 'A workflow document with: input format, step-by-step process, review gates, and a final output example.',
-      time_est: '4-6 hrs',
-    },
-  };
-
-  const step3: RoadmapStep = {
-    label: 'STEP 3 - DAYS 61-90',
-    theme: 'Portfolio Signal',
-    nodes: [
-      makeNode(
-        'n5', 'Automation Systems',
-        'Connect tools and handoffs so your work moves with less manual effort.',
-        'Trigger-based workflows, file handoffs, summaries, and routine reporting. Connect small pieces before attempting large systems.',
-        'You will have a lightweight automation handling at least one real business task.',
-        [
-          { id: 'n5-s1', title: 'Choose your automation trigger', description: 'Decide what starts your workflow — a new form submission, a calendar event, or a file arriving in a folder.', outcome: 'A clear starting event with a documented trigger condition.', tools: ['Zapier', 'n8n'], time_est: '30 min' },
-          { id: 'n5-s2', title: 'Build the automation skeleton', description: 'Set up the trigger and one action in Zapier or n8n. Use a test event to confirm the connection works.', outcome: 'A working 2-step automation you can demonstrate.', tools: ['Zapier', 'n8n'], time_est: '1-2 hrs' },
-          { id: 'n5-s3', title: 'Test with real input', description: 'Run the automation against realistic data from your role. Fix anything that breaks or produces wrong output.', outcome: 'A tested automation that runs correctly on real data.', tools: ['Zapier', 'n8n', 'ChatGPT'], time_est: '1 hr' },
-        ],
-        'advanced', role, 'project'
-      ),
-      makeNode(
-        'n6', 'Capstone Project',
-        `Package your AI-supported ${role} work into a visible proof project.`,
-        'Selecting a real business problem, solving it with your workflow, and presenting the result clearly for your portfolio.',
-        'You will have a portfolio-quality proof of AI-native work in your role.',
-        [
-          { id: 'n6-s1', title: 'Choose a real problem to solve', description: 'Pick a problem from your actual role that has a measurable outcome — time saved, quality improved, or output volume increased.', outcome: 'A project statement: problem, expected outcome, and success metric.', tools: ['Notion', 'ChatGPT'], time_est: '45 min' },
-          { id: 'n6-s2', title: 'Build the proof', description: 'Use your workflow to produce a real, finished deliverable for this problem. Document each step as you go.', outcome: 'A finished work sample you are proud to show.', tools: ['ChatGPT', 'Claude', 'Notion'], time_est: '3-4 hrs' },
-          { id: 'n6-s3', title: 'Write the case study', description: 'Explain the problem, your workflow, the result, and the measurable improvement in one page. Use plain language.', outcome: 'A one-page project case study ready for a portfolio or interview.', tools: ['Notion', 'ChatGPT'], time_est: '1 hr' },
-        ],
-        'advanced', role, 'project'
-      ),
-    ],
-    checkpoint: {
-      title: 'AI-Native Portfolio Project',
-      goal: `Deliver one high-quality ${role} outcome using an end-to-end AI-supported workflow.`,
-      concepts: ['Automation design', 'Quality assurance', 'Business presentation'],
-      problem_statement: 'You need a proof project showing you can redesign work around AI — not just use tools casually.',
-      done_criteria: 'A polished project page explaining the problem, workflow, result, and measurable improvement.',
-      time_est: '6-8 hrs',
-    },
-  };
-
-  return { step1, step2, step3, glossary: [] };
-}
-
-function isValidNode(node: RoadmapNode): boolean {
-  const name = node.name_plain.trim();
-  const hasBannedTerm = BANNED_CANVAS_TERMS.some((term) => name.includes(term));
-  return (
-    name.length > 0 &&
-    !hasBannedTerm &&
-    Array.isArray(node.subnodes) &&
-    node.subnodes.length >= 3 &&
-    node.subnodes.length <= 4
-  );
-}
-
-function validateRoadmap(roadmap: Roadmap): Roadmap {
-  const steps = [roadmap.step1, roadmap.step2, roadmap.step3];
-  for (const step of steps) {
-    if (!Array.isArray(step.nodes) || step.nodes.length < 2 || step.nodes.length > 3) {
-      throw new Error('Roadmap step must have 2-3 top-level nodes');
-    }
-    if (!step.nodes.every(isValidNode)) {
-      throw new Error('Roadmap node failed validation');
-    }
-    if (!step.checkpoint?.title || !step.checkpoint.done_criteria) {
-      throw new Error('Roadmap checkpoint missing required fields');
-    }
-  }
-  // Ensure tools/time_est defaults on every subnode
-  for (const step of steps) {
-    for (const node of step.nodes) {
-      node.subnodes = node.subnodes.map(s => ({
-        tools: [],
-        time_est: '',
-        ...s,
-      }));
-    }
-  }
-  return roadmap;
-}
+// ── Main export ──────────────────────────────────────────────────────────────
 
 export async function generateRoadmap(
   roleCategory: RoleCategory,
@@ -371,6 +433,8 @@ export async function generateRoadmap(
   topTasks: string[],
   aiFamiliarity: AiFamiliarity = 'none'
 ): Promise<Roadmap> {
+  const role = ROLE_DISPLAY[roleCategory];
+
   try {
     const raw = await callLLM({
       system: SYSTEM_PROMPT,
@@ -380,8 +444,15 @@ export async function generateRoadmap(
     });
 
     const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-    return validateRoadmap(JSON.parse(stripped) as Roadmap);
-  } catch {
-    return buildFallback(roleCategory);
+    const parsed = JSON.parse(stripped) as Roadmap;
+    return repairRoadmap(parsed, gapClusters, role);
+  } catch (err) {
+    console.error(JSON.stringify({
+      event: 'roadmap_gen_fallback',
+      error: err instanceof Error ? err.message : String(err),
+      role: roleCategory,
+      gap_cluster_ids: gapClusters.map(c => c.id),
+    }));
+    return buildFallback(roleCategory, gapClusters);
   }
 }

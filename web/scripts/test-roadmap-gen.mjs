@@ -177,36 +177,86 @@ const NON_VERB_OPENERS = ['a', 'an', 'the', 'my', 'your', 'our', 'this', 'that',
 const GENERIC_ANALOGY_TERMS = ['recipe', 'chef', 'toolbox', 'blueprint', 'gps', 'cookbook'];
 const CODE_TERMS_IN_TITLES = ['api', 'endpoint', 'curl', 'http', 'code', 'function', 'deploy', 'server', 'database', 'sql', 'python', 'fastapi'];
 
+const FALLBACK_NODE_NAMES = ['Clear Instructions', 'Tool Selection', 'Workflow Design'];
+const MARKETER_TOOLS = ['ChatGPT', 'Canva AI', 'HeyGen', 'Jasper', 'Zapier', 'n8n', 'Notion AI'];
+const MARKETER_CODE_JARGON = ['API', 'endpoint', 'deploy', 'CLI', 'Docker', 'Python', 'SQL'];
+
 function assertRoadmap(roadmap, personaName, role) {
   const steps = [roadmap.step1, roadmap.step2, roadmap.step3];
   const failures = [];
   let subnodeCount = 0;
-  let subnodesPassed = 0;
 
-  for (const step of steps) {
+  // CRITICAL: Glossary must be non-empty with real terms
+  if (!Array.isArray(roadmap.glossary) || roadmap.glossary.length < 3) {
+    failures.push(`[${personaName}] Glossary has ${roadmap.glossary?.length ?? 0} terms — need >= 3`);
+  }
+  for (const term of (roadmap.glossary ?? [])) {
+    if (!term.term || !term.definition) {
+      failures.push(`[${personaName}] Glossary entry missing term or definition: ${JSON.stringify(term)}`);
+    }
+  }
+
+  for (let stepIdx = 0; stepIdx < steps.length; stepIdx++) {
+    const step = steps[stepIdx];
+
+    // CRITICAL: step must have 2-3 nodes (exact constraint validateRoadmap checks)
+    if (!Array.isArray(step?.nodes) || step.nodes.length < 2) {
+      failures.push(`[${personaName}] STEP ${stepIdx + 1} has ${step?.nodes?.length ?? 0} nodes — need >= 2 (Bug 2 trigger)`);
+      continue; // can't check nodes if step is broken
+    }
+    if (step.nodes.length > 3) {
+      failures.push(`[${personaName}] STEP ${stepIdx + 1} has ${step.nodes.length} nodes — max 3`);
+    }
+
     for (const node of step.nodes) {
+      // CRITICAL: each node needs 3-4 subnodes (exact constraint isValidNode checks)
+      if (!Array.isArray(node.subnodes) || node.subnodes.length < 3) {
+        failures.push(`[${personaName}] Node "${node.name_plain}" has ${node.subnodes?.length ?? 0} subnodes — need >= 3 (Bug 2 trigger)`);
+      }
+      if ((node.subnodes?.length ?? 0) > 4) {
+        failures.push(`[${personaName}] Node "${node.name_plain}" has ${node.subnodes.length} subnodes — max 4`);
+      }
+
+      // North Star: skill_ids must be populated
+      if (!Array.isArray(node.skill_ids) || node.skill_ids.length === 0) {
+        failures.push(`[${personaName}] Node "${node.name_plain}" has empty skill_ids[] — must reference gap cluster IDs`);
+      }
+
+      // Engineer: no generic fallback node names
+      if (role === 'engineer' && FALLBACK_NODE_NAMES.includes(node.name_plain)) {
+        failures.push(`[${personaName}] Generic fallback node "${node.name_plain}" found — engineer got fallback content`);
+      }
+
+      // Marketer: no code jargon in node names
+      if (role === 'marketer') {
+        for (const jargon of MARKETER_CODE_JARGON) {
+          if (node.name_plain.includes(jargon)) {
+            failures.push(`[${personaName}] Node name "${node.name_plain}" contains code jargon "${jargon}"`);
+          }
+        }
+      }
+
       for (const sub of (node.subnodes ?? [])) {
         subnodeCount++;
 
-        // Flaw 5: verb-first title — first word must not be a non-verb opener
+        // Verb-first title
         const titleLower = sub.title?.toLowerCase() ?? '';
         const firstWord = titleLower.split(/\s+/)[0] ?? '';
-        const startsWithNonVerb = NON_VERB_OPENERS.includes(firstWord);
-        if (startsWithNonVerb || !firstWord) {
+        if (NON_VERB_OPENERS.includes(firstWord) || !firstWord) {
           failures.push(`[${personaName}] Subnode "${sub.title}" does NOT start with an action verb (starts with "${firstWord}")`);
         }
 
-        // Flaw 5: tools populated
+        // tools populated
         if (!Array.isArray(sub.tools) || sub.tools.length === 0) {
           failures.push(`[${personaName}] Subnode "${sub.title}" has empty tools[]`);
         }
 
-        // Flaw 5: time_est populated
+        // time_est populated
         if (!sub.time_est || sub.time_est.trim() === '') {
           failures.push(`[${personaName}] Subnode "${sub.title}" has empty time_est`);
         }
 
-        // Flaw 6 (non-tech roles): no code jargon in subnode titles
+        // Non-tech: no code jargon in subnode titles
         if (['marketer', 'designer', 'sales'].includes(role)) {
           const hasCodeJargon = CODE_TERMS_IN_TITLES.some(t => titleLower.includes(t));
           if (hasCodeJargon) {
@@ -214,24 +264,38 @@ function assertRoadmap(roadmap, personaName, role) {
           }
         }
 
-        if (failures.length === failures.length) subnodesPassed++;
+        // Marketer: tools must include at least one marketer-approved tool
+        if (role === 'marketer') {
+          const hasMarketerTool = (sub.tools ?? []).some(t => MARKETER_TOOLS.includes(t));
+          if (!hasMarketerTool) {
+            failures.push(`[${personaName}] Marketer subnode "${sub.title}" has no approved tools — got [${(sub.tools ?? []).join(', ')}]`);
+          }
+        }
       }
 
-      // Flaw 6: analogy must be role-specific
+      // Analogy must be role-specific
       const analogyText = [
         node.analogy?.base ?? '',
         node.analogy?.role_skin ?? '',
         node.analogy?.bridge_line ?? '',
       ].join(' ').toLowerCase();
 
-      const hasGenericAnalogy = GENERIC_ANALOGY_TERMS.some(t => analogyText.includes(t));
-      if (hasGenericAnalogy) {
+      if (GENERIC_ANALOGY_TERMS.some(t => analogyText.includes(t))) {
         failures.push(`[${personaName}] Node "${node.name_plain}" analogy uses generic metaphor: "${node.analogy?.base}"`);
       }
-
       if (!node.analogy?.base || !node.analogy?.bridge_line) {
         failures.push(`[${personaName}] Node "${node.name_plain}" analogy missing base or bridge_line`);
       }
+    }
+  }
+
+  // Engineer North Star: at least one subnode references FastAPI or Claude API
+  if (role === 'engineer') {
+    const allTools = steps.flatMap(s => (s?.nodes ?? []).flatMap(n => (n.subnodes ?? []).flatMap(sub => sub.tools ?? [])));
+    const ENGINEER_TECH_TOOLS = ['FastAPI', 'Claude API', 'Claude', 'OpenAI', 'LangChain', 'Supabase', 'Pinecone'];
+    const hasTechTool = allTools.some(t => ENGINEER_TECH_TOOLS.includes(t));
+    if (!hasTechTool) {
+      failures.push(`[${personaName}] Engineer North Star FAILED — no subnode has FastAPI/Claude API/LangChain tools. Got: [${[...new Set(allTools)].slice(0, 10).join(', ')}]`);
     }
   }
 
