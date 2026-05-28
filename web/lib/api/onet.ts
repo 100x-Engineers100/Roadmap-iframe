@@ -1,6 +1,9 @@
 import type { OnetTask } from '@/types';
+import { collectOnetTasks, getNextWindow } from './onet-utils.mjs';
 
 const ONET_BASE_URL = 'https://api-v2.onetcenter.org/online';
+const TASK_PAGE_SIZE = 25;
+const MAX_TASK_PAGES = 8;
 
 function getApiKey(): string {
   const key = process.env.ONET_API_KEY;
@@ -16,6 +19,11 @@ function onetHeaders(): HeadersInit {
 }
 
 interface OnetTasksResponse {
+  start?: number;
+  end?: number;
+  total?: number;
+  prev?: string;
+  next?: string;
   task?: Array<{
     id: string;
     title: string;
@@ -25,24 +33,34 @@ interface OnetTasksResponse {
 }
 
 export async function getTasksForSOC(socCode: string): Promise<OnetTask[]> {
-  const url = `${ONET_BASE_URL}/occupations/${encodeURIComponent(socCode)}/details/tasks`;
-  const res = await fetch(url, { headers: onetHeaders() });
+  const responses: OnetTasksResponse[] = [];
+  let start = 1;
+  let end = TASK_PAGE_SIZE;
 
-  if (!res.ok) {
-    throw new Error(`O*NET tasks request failed: ${res.status} ${res.statusText} for SOC ${socCode}`);
+  for (let page = 0; page < MAX_TASK_PAGES; page += 1) {
+    const url = `${ONET_BASE_URL}/occupations/${encodeURIComponent(socCode)}/details/tasks?sort=importance&start=${start}&end=${end}`;
+    const res = await fetch(url, { headers: onetHeaders() });
+
+    if (!res.ok) {
+      throw new Error(`O*NET tasks request failed: ${res.status} ${res.statusText} for SOC ${socCode}`);
+    }
+
+    const data: OnetTasksResponse = await res.json();
+    responses.push(data);
+
+    const nextWindow = getNextWindow(data, start, TASK_PAGE_SIZE);
+    if (!nextWindow) break;
+
+    start = nextWindow.start;
+    end = nextWindow.end;
   }
 
-  const data: OnetTasksResponse = await res.json();
-
-  if (!data.task || data.task.length === 0) {
+  const tasks = collectOnetTasks(responses) as OnetTask[];
+  if (tasks.length === 0) {
     throw new Error(`No tasks returned from O*NET for SOC ${socCode}`);
   }
 
-  return data.task.map((t) => ({
-    id: t.id,
-    description: t.title,
-    importance: t.importance,
-  }));
+  return tasks;
 }
 
 export async function validateSOCCode(socCode: string): Promise<boolean> {

@@ -28,8 +28,24 @@ export function RoadmapNodeTile({
   const halo = isMobile ? 18 : isProject ? 18 : 22;
   const tileWidth = isMobile ? 320 : 214;
   const tileHeight = isMobile ? 72 : 64;
-  const leaderLength = isMobile ? 34 : 48;
-  const leaderVertical = isMobile ? 36 : 32;
+  const leaderLength = Math.abs(
+    placement.anchor === 'left'
+      ? point.x - (placement.left + tileWidth)
+      : placement.anchor === 'right'
+        ? placement.left - point.x
+        : isMobile
+          ? 34
+          : 48
+  );
+  const leaderVertical = Math.abs(
+    placement.anchor === 'top'
+      ? point.y - (placement.top + tileHeight)
+      : placement.anchor === 'bottom'
+        ? placement.top - point.y
+        : isMobile
+          ? 36
+          : 32
+  );
   const leaderMinX = placement.anchor === 'left' ? point.x - leaderLength : point.x;
   const leaderMaxX = placement.anchor === 'right' ? point.x + leaderLength : point.x;
   const leaderMinY = placement.anchor === 'top' ? point.y - leaderVertical : point.y;
@@ -45,6 +61,12 @@ export function RoadmapNodeTile({
     height: boundsBottom - boundsTop,
     '--node-index': index,
   } as CSSProperties;
+  const leaderStyle = {
+    left: point.x - boundsLeft,
+    top: point.y - boundsTop,
+    '--roadmap-leader-length': `${leaderLength}px`,
+    '--roadmap-leader-vertical': `${leaderVertical}px`,
+  } as CSSProperties;
 
   return (
     <button
@@ -56,10 +78,7 @@ export function RoadmapNodeTile({
     >
       <span
         className={`roadmap-leader roadmap-leader-${placement.anchor}`}
-        style={{
-          left: point.x - boundsLeft,
-          top: point.y - boundsTop,
-        }}
+        style={leaderStyle}
         aria-hidden="true"
       />
       <span

@@ -9,15 +9,19 @@ import { ScoreReveal } from '@/components/screens/ScoreReveal';
 import { GapView } from '@/components/screens/GapView';
 import { EmailGate } from '@/components/screens/EmailGate';
 import { RoadmapView } from '@/components/screens/RoadmapView';
+import { buildUserWorkProfile } from '@/lib/profile/user-work-profile.mjs';
 import type {
   SOCMatch,
   OnetTask,
   TaskWeight,
   AiFamiliarity,
+  WorkContext,
   RoleCategory,
   ScoreBand,
   SkillGapResult,
   Roadmap,
+  UserWorkProfile,
+  GapInferenceResult,
 } from '@/types';
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -25,23 +29,27 @@ import type {
 interface AssessState {
   step: 2 | 3 | 4 | 5 | 6 | 7 | 8;
   input: string;
+  workContext: WorkContext;
   socMatch: SOCMatch | null;
   roleCategory: RoleCategory | null;
   tasks: OnetTask[];
   taskWeights: Record<string, TaskWeight>;
   confirmedClusterIds: string[];
   aiFamiliarity: AiFamiliarity;
+  userProfile: UserWorkProfile | null;
   riskScore: number | null;
   scoreBand: ScoreBand | null;
   skillGap: SkillGapResult | null;
   fallbackUsed: boolean;
+  gapInferenceResult: GapInferenceResult | null;
   roadmap: Roadmap | null;
 }
 
 type Action =
-  | { type: 'CONFIRM_SOC'; soc: SOCMatch; tasks: OnetTask[]; role: RoleCategory; input: string }
-  | { type: 'SUBMIT_WEIGHTS'; weights: Record<string, TaskWeight>; confirmedClusterIds: string[]; aiFamiliarity: AiFamiliarity }
+  | { type: 'CONFIRM_SOC'; soc: SOCMatch; tasks: OnetTask[]; role: RoleCategory; input: string; workContext: WorkContext }
+  | { type: 'SUBMIT_WEIGHTS'; weights: Record<string, TaskWeight>; confirmedClusterIds: string[]; aiFamiliarity: AiFamiliarity; userProfile: UserWorkProfile }
   | { type: 'SET_SCORE'; score: number; band: ScoreBand; skillGap: SkillGapResult; fallbackUsed: boolean; aiFamiliarity: AiFamiliarity }
+  | { type: 'SET_GAP_INFERENCE_RESULT'; result: GapInferenceResult }
   | { type: 'ADVANCE_TO_GAP' }
   | { type: 'ADVANCE_TO_EMAIL' }
   | { type: 'SET_ROADMAP'; roadmap: Roadmap }
@@ -50,16 +58,19 @@ type Action =
 const initialState: AssessState = {
   step: 2,
   input: '',
+  workContext: 'startup',
   socMatch: null,
   roleCategory: null,
   tasks: [],
   taskWeights: {},
   confirmedClusterIds: [],
   aiFamiliarity: 'none',
+  userProfile: null,
   riskScore: null,
   scoreBand: null,
   skillGap: null,
   fallbackUsed: false,
+  gapInferenceResult: null,
   roadmap: null,
 };
 
@@ -70,6 +81,7 @@ function reducer(state: AssessState, action: Action): AssessState {
         ...state,
         step: 3,
         input: action.input,
+        workContext: action.workContext,
         socMatch: action.soc,
         tasks: action.tasks,
         roleCategory: action.role,
@@ -84,6 +96,7 @@ function reducer(state: AssessState, action: Action): AssessState {
         taskWeights: action.weights,
         confirmedClusterIds: action.confirmedClusterIds,
         aiFamiliarity: action.aiFamiliarity,
+        userProfile: action.userProfile,
       };
     case 'SET_SCORE':
       return {
@@ -95,6 +108,8 @@ function reducer(state: AssessState, action: Action): AssessState {
         fallbackUsed: action.fallbackUsed,
         aiFamiliarity: action.aiFamiliarity,
       };
+    case 'SET_GAP_INFERENCE_RESULT':
+      return { ...state, gapInferenceResult: action.result };
     case 'ADVANCE_TO_GAP':
       return { ...state, step: 6 };
     case 'ADVANCE_TO_EMAIL':
@@ -117,6 +132,7 @@ interface ScoreApiResponse {
   skill_gap: SkillGapResult;
   base_source: 'llm_exposure' | 'role_fallback';
   ai_familiarity: AiFamiliarity;
+  user_profile?: UserWorkProfile;
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -124,10 +140,11 @@ interface ScoreApiResponse {
 export default function AssessPage() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const scorePromiseRef = useRef<Promise<ScoreApiResponse> | null>(null);
+  const gapInferenceCalledRef = useRef(false);
 
   useEffect(() => {
     if (state.step !== 4) return;
-    const { socMatch, tasks, taskWeights, roleCategory } = state;
+    const { socMatch, tasks, taskWeights, roleCategory, userProfile } = state;
     if (!socMatch || !roleCategory || tasks.length === 0) return;
 
     scorePromiseRef.current = fetch('/api/score', {
@@ -138,13 +155,42 @@ export default function AssessPage() {
         tasks,
         task_weights: taskWeights,
         role_category: roleCategory,
+        user_profile: userProfile,
         confirmed_cluster_ids: state.confirmedClusterIds,
         ai_familiarity: state.aiFamiliarity,
+        work_context: state.workContext,
       }),
     }).then(async (res) => {
       if (!res.ok) throw new Error(`Score API ${res.status}`);
       return res.json() as Promise<ScoreApiResponse>;
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step]);
+
+  // Fire gap-inference when score is revealed (step 5) — result ready by email gate
+  useEffect(() => {
+    if (state.step !== 5) return;
+    if (gapInferenceCalledRef.current) return;
+    const { input, roleCategory, workContext, aiFamiliarity, tasks, taskWeights, confirmedClusterIds } = state;
+    if (!roleCategory || tasks.length === 0) return;
+    gapInferenceCalledRef.current = true;
+
+    fetch('/api/gap-inference', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        raw_role_text: input,
+        role_category: roleCategory,
+        work_context: workContext,
+        ai_familiarity: aiFamiliarity,
+        tasks,
+        task_weights: taskWeights,
+        confirmed_cluster_ids: confirmedClusterIds,
+      }),
+    })
+      .then(res => res.ok ? res.json() as Promise<GapInferenceResult> : Promise.reject(new Error(`gap-inference ${res.status}`)))
+      .then(result => dispatch({ type: 'SET_GAP_INFERENCE_RESULT', result }))
+      .catch(err => console.error('[gap-inference] fetch failed:', err));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.step]);
 
@@ -197,8 +243,8 @@ export default function AssessPage() {
             <RoleInput
               savedInput={state.input}
               savedMatch={state.socMatch}
-              onConfirm={(soc, tasks, role, input) =>
-                dispatch({ type: 'CONFIRM_SOC', soc, tasks, role, input })
+              onConfirm={(soc, tasks, role, input, workContext) =>
+                dispatch({ type: 'CONFIRM_SOC', soc, tasks, role, input, workContext })
               }
             />
           </motion.div>
@@ -216,9 +262,20 @@ export default function AssessPage() {
               tasks={state.tasks}
               weights={state.taskWeights}
               onBack={() => dispatch({ type: 'GO_BACK' })}
-              onSubmit={(weights, confirmedClusterIds, aiFamiliarity) =>
-                dispatch({ type: 'SUBMIT_WEIGHTS', weights, confirmedClusterIds, aiFamiliarity })
-              }
+              onSubmit={(weights, confirmedClusterIds, aiFamiliarity) => {
+                if (!state.socMatch || !state.roleCategory) return;
+                const userProfile = buildUserWorkProfile({
+                  rawRoleText: state.input,
+                  socMatch: state.socMatch,
+                  roleCategory: state.roleCategory,
+                  tasks: state.tasks,
+                  taskWeights: weights,
+                  aiFamiliarity,
+                  workContext: state.workContext,
+                  confirmedClusterIds,
+                }) as UserWorkProfile;
+                dispatch({ type: 'SUBMIT_WEIGHTS', weights, confirmedClusterIds, aiFamiliarity, userProfile });
+              }}
             />
           </motion.div>
         )}
@@ -284,6 +341,8 @@ export default function AssessPage() {
               taskWeights={state.taskWeights}
               skillGap={state.skillGap}
               aiFamiliarity={state.aiFamiliarity}
+              userProfile={state.userProfile}
+              gapInferenceResult={state.gapInferenceResult}
               onRoadmapReady={(roadmap) => dispatch({ type: 'SET_ROADMAP', roadmap })}
             />
           </motion.div>

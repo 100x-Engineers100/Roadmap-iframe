@@ -16,7 +16,7 @@ export const SKILL_CLUSTERS: SkillCluster[] = [
     id: 'C2A',
     name: 'Map and automate your work with AI',
     can_do: 'Replace manual repetitive tasks with reliable AI-powered workflows',
-    skill_ids: ['S2.1', 'S2.2', 'S2.11'],
+    skill_ids: ['S2.1', 'S2.2'],
     module: 'm2',
     roles: ALL_ROLES,
     checkpoint_hint: 'Build 3 reusable AI prompt templates for your top weekly tasks and document the workflow',

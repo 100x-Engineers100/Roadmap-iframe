@@ -85,18 +85,73 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
           </button>
         </div>
 
+
         <RoadmapCanvas
           items={items}
           selectedId={selected?.node.id ?? null}
           isMobile={isMobile}
           onSelect={setSelected}
         />
+
+        {roadmap.project_checkpoints?.length ? (
+          <section className="checkpoint-strip" aria-label="Project checkpoints">
+            <div className="primer-strip-head">
+              <span>Project cadence</span>
+              <strong>Build things. Prove you can do it.</strong>
+            </div>
+            <div className="checkpoint-strip-grid">
+              {roadmap.project_checkpoints.filter(c => c.type === 'mini_project').map((checkpoint, i) => (
+                <article key={checkpoint.id} className="checkpoint-card checkpoint-card-mini">
+                  <div className="checkpoint-card-tag">Mini Build {i + 1}</div>
+                  <h3 className="checkpoint-card-title">{checkpoint.title}</h3>
+                  <p className="checkpoint-card-goal">{checkpoint.goal}</p>
+                  {checkpoint.artifact_to_build && (
+                    <div className="checkpoint-card-artifact">
+                      <span>Artifact</span>
+                      <strong>{checkpoint.artifact_to_build}</strong>
+                    </div>
+                  )}
+                  {checkpoint.tools?.length > 0 && (
+                    <div className="checkpoint-card-tools">
+                      {checkpoint.tools.map(t => <span key={t} className="tool-pill">{t}</span>)}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+            {roadmap.project_checkpoints.filter(c => c.type === 'final_project').map(checkpoint => (
+              <article key={checkpoint.id} className="checkpoint-card checkpoint-card-capstone">
+                <div className="checkpoint-capstone-header">
+                  <div className="checkpoint-card-tag checkpoint-card-tag-capstone">Capstone</div>
+                  <h3 className="checkpoint-card-title">{checkpoint.title}</h3>
+                  <p className="checkpoint-card-goal">{checkpoint.goal}</p>
+                </div>
+                <div className="checkpoint-capstone-body">
+                  {checkpoint.done_when?.length > 0 && (
+                    <div className="checkpoint-capstone-criteria">
+                      <span>Done when</span>
+                      <ul>
+                        {checkpoint.done_when.map((item, i) => <li key={i}>{item}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {checkpoint.tools?.length > 0 && (
+                    <div className="checkpoint-card-tools">
+                      {checkpoint.tools.map(t => <span key={t} className="tool-pill">{t}</span>)}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : null}
       </main>
 
       <RoadmapSidePanel
         selected={selected}
         total={items.length}
         isMobile={isMobile}
+        journeyAnalogy={roadmap.journey_analogy}
         onClose={() => setSelected(null)}
       />
       <RoadmapGlossaryPanel

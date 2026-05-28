@@ -8,10 +8,15 @@ export interface LLMCallParams {
   user: string;
   maxTokens: number;
   temperature: number;
+  jsonSchema?: {
+    name: string;
+    schema: Record<string, unknown>;
+    strict: boolean;
+  };
 }
 
 // const ANTHROPIC_MODEL = "claude-sonnet-4-6";  // uncomment when switching to Anthropic
-const OPENAI_MODEL = "gpt-4o";
+const OPENAI_MODEL = "gpt-4.1-mini";
 
 export async function callLLM(params: LLMCallParams): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
@@ -26,6 +31,12 @@ export async function callLLM(params: LLMCallParams): Promise<string> {
       { role: "system", content: params.system },
       { role: "user", content: params.user },
     ],
+    ...(params.jsonSchema ? {
+      response_format: {
+        type: "json_schema" as const,
+        json_schema: params.jsonSchema,
+      },
+    } : {}),
   });
 
   const content = res.choices[0]?.message?.content;

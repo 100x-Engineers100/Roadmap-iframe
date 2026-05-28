@@ -1,5 +1,6 @@
 'use client';
 
+import { PartyPopper } from 'lucide-react';
 import { RoadmapNodeTile } from './RoadmapNodeTile';
 import {
   buildPath,
@@ -7,6 +8,7 @@ import {
   getDesktopLayout,
   getMobilePoints,
   buildRoundedOrthogonalPath,
+  getTilePlacement,
   type RoadmapNodeItem,
 } from './roadmapUtils';
 
@@ -21,8 +23,25 @@ export function RoadmapCanvas({ items, selectedId, isMobile, onSelect }: Roadmap
   const desktopLayout = getDesktopLayout(items.length);
   const points = isMobile ? getMobilePoints(items.length) : desktopLayout.points;
   const path = isMobile ? buildPath(points) : buildRoundedOrthogonalPath(desktopLayout.route);
-  const canvasHeight = getCanvasHeight(points);
-  const stamp = isMobile ? null : desktopLayout.stamp;
+  const finishStamp = !isMobile && items.length
+    ? (() => {
+        const finalIndex = items.length - 1;
+        const finalPoint = points[finalIndex];
+        if (!finalPoint) return null;
+
+        const maxTileBottom = points.reduce((maxY, point, index) => {
+          const tile = getTilePlacement(index, point, false);
+          return Math.max(maxY, tile.top + 80);
+        }, 0);
+
+        const finalTile = getTilePlacement(finalIndex, finalPoint, false);
+        return {
+          x: finalTile.left + 107,
+          y: maxTileBottom + 48,
+        };
+      })()
+    : null;
+  const canvasHeight = Math.max(getCanvasHeight(points), finishStamp ? finishStamp.y + 60 : 0);
 
   return (
     <div className="roadmap-canvas" style={{ height: canvasHeight }}>
@@ -44,13 +63,23 @@ export function RoadmapCanvas({ items, selectedId, isMobile, onSelect }: Roadmap
         />
       ))}
 
-      {stamp && (
+      {finishStamp && (
         <div
           className="roadmap-finish-stamp"
-          style={{ left: stamp.x, top: stamp.y }}
-          aria-label="AI-updated completion stamp"
+          style={{ left: finishStamp.x, top: finishStamp.y }}
+          aria-label="Roadmap completion celebration"
         >
-          AI-updated
+          <span className="roadmap-finish-confetti" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="roadmap-finish-medal" aria-hidden="true">
+            <PartyPopper size={21} strokeWidth={2.4} />
+          </span>
+          <span className="roadmap-finish-copy">
+            <strong>You are now <em>100x</em> better.</strong>
+          </span>
         </div>
       )}
     </div>

@@ -4,7 +4,7 @@
   min-height: 720px;
   overflow: hidden;
   background:
-    linear-gradient(135deg, rgba(178, 44, 17, 0.05) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(255, 99, 67, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(26, 28, 28, 0.032) 1px, transparent 1px),
     linear-gradient(0deg, rgba(26, 28, 28, 0.032) 1px, transparent 1px),
     var(--bg-100x-grid);
@@ -23,8 +23,8 @@
 .page::before {
   inset: 0;
   background:
-    repeating-linear-gradient(90deg, transparent 0 150px, rgba(178, 44, 17, 0.048) 150px 151px, transparent 151px 300px),
-    repeating-linear-gradient(0deg, transparent 0 150px, rgba(178, 44, 17, 0.04) 150px 151px, transparent 151px 300px);
+    repeating-linear-gradient(90deg, transparent 0 150px, rgba(255, 99, 67, 0.048) 150px 151px, transparent 151px 300px),
+    repeating-linear-gradient(0deg, transparent 0 150px, rgba(255, 99, 67, 0.04) 150px 151px, transparent 151px 300px);
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.68), transparent 74%);
 }
 
@@ -35,7 +35,7 @@
   height: 420px;
   border: 1px solid rgba(226, 191, 183, 0.82);
   background:
-    repeating-linear-gradient(135deg, rgba(178, 44, 17, 0.09) 0 1px, transparent 1px 19px),
+    repeating-linear-gradient(135deg, rgba(255, 99, 67, 0.09) 0 1px, transparent 1px 19px),
     rgba(255, 248, 246, 0.68);
   clip-path: polygon(15% 0, 100% 20%, 84% 100%, 0 80%);
 }
@@ -57,20 +57,27 @@
 }
 
 .navCta {
-  min-height: 28px;
+  position: relative;
+  z-index: 1;
+  min-height: 32px;
   gap: 6px;
-  border: 1px solid rgba(26, 28, 28, 0.14);
+  border: 1px solid rgba(255, 99, 67, 0.48);
   border-radius: 999px;
-  background: var(--color-dark);
-  box-shadow: 2px 2px 0 rgba(255, 99, 67, 0.2);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 44%),
+    var(--color-dark);
+  box-shadow: 0 0 0 4px rgba(255, 99, 67, 0.08), 2px 2px 0 rgba(255, 99, 67, 0.26);
   color: #ffffff;
-  font-size: 9px;
+  font-size: 10.5px;
   letter-spacing: 0.04em;
-  padding: 0 10px;
+  padding: 0 12px 0 14px;
 }
 
 .navCta:hover {
-  background: #2d1b17;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 44%),
+    #2d1b17;
+  box-shadow: 0 0 0 5px rgba(255, 99, 67, 0.1), 3px 3px 0 rgba(255, 99, 67, 0.28);
   transform: translateY(-1px);
 }
 
@@ -92,32 +99,68 @@
   display: grid;
   min-width: 0;
   min-height: 100svh;
-  grid-template-rows: 40px minmax(0, 1fr);
+  grid-template-rows: 48px minmax(0, 1fr);
 }
 
 .leftNav {
+  position: relative;
+  z-index: 1;
   display: flex;
   min-width: 0;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(226, 191, 183, 0.62);
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 99, 67, 0.22);
   background:
-    linear-gradient(90deg, rgba(26, 28, 28, 0.03) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(26, 28, 28, 0.03) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 248, 246, 0.76));
-  background-size: 36px 36px, 36px 36px, auto;
-  box-shadow: 0 10px 28px rgba(178, 44, 17, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  padding: 0 14px 0 10px;
+    linear-gradient(90deg, rgba(255, 99, 67, 0.1) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(26, 28, 28, 0.032) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 248, 246, 0.96), rgba(255, 255, 255, 0.82));
+  background-size: 24px 24px, 24px 24px, auto;
+  box-shadow: 0 12px 30px rgba(255, 99, 67, 0.065), inset 0 -1px 0 rgba(255, 255, 255, 0.72);
+  padding: 0 16px 0 12px;
   backdrop-filter: blur(12px);
 }
 
+.leftNav::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--color-primary-vivid);
+  box-shadow: 12px 0 0 rgba(255, 99, 67, 0.08);
+}
+
+.leftNav::after {
+  content: '';
+  position: absolute;
+  right: 112px;
+  bottom: -26px;
+  width: 90px;
+  height: 52px;
+  border: 1px solid rgba(255, 99, 67, 0.3);
+  border-radius: 999px 999px 0 0;
+  transform: rotate(-8deg);
+}
+
+.brand {
+  position: relative;
+  z-index: 1;
+}
+
 .brand strong {
-  display: block;
-  color: var(--color-text);
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  border: 1px solid rgba(26, 28, 28, 0.9);
+  border-radius: 999px;
+  background: var(--color-dark);
+  box-shadow: 2px 2px 0 rgba(255, 99, 67, 0.2);
+  color: #ffffff;
   font-family: var(--font-heading);
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 950;
   line-height: 1;
+  padding: 0 13px;
 }
 
 .copy {
@@ -169,7 +212,7 @@
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent 42%),
     var(--color-primary-vivid);
-  box-shadow: 0 0 0 5px rgba(255, 99, 67, 0.08), 4px 4px 0 rgba(178, 44, 17, 0.22);
+  box-shadow: 0 0 0 5px rgba(255, 99, 67, 0.08), 4px 4px 0 rgba(255, 99, 67, 0.22);
   color: #ffffff;
   font-size: 13px;
   letter-spacing: 0.04em;
@@ -180,7 +223,7 @@
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 42%),
     #e8502e;
-  box-shadow: 0 0 0 7px rgba(255, 99, 67, 0.1), 6px 6px 0 rgba(178, 44, 17, 0.28);
+  box-shadow: 0 0 0 7px rgba(255, 99, 67, 0.1), 6px 6px 0 rgba(255, 99, 67, 0.28);
   transform: translateY(-1px);
 }
 
@@ -246,10 +289,26 @@
 }
 
 .videoPanel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 99, 67, 0.12) 0%, rgba(255, 99, 67, 0.084) 24%, rgba(255, 99, 67, 0.046) 45%, rgba(255, 99, 67, 0.015) 62%, rgba(255, 99, 67, 0) 76%),
+    linear-gradient(90deg, rgba(255, 248, 246, 0.048), rgba(255, 99, 67, 0.034) 48%, rgba(255, 99, 67, 0) 78%);
+  pointer-events: none;
+}
+
+.videoPanel::after {
   content: none;
 }
 
 .heroVideo {
+  position: relative;
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -257,6 +316,7 @@
   object-fit: cover;
   object-position: 52% 50%;
 }
+
 
 @keyframes scan {
 
@@ -294,7 +354,7 @@
 
   .leftPane {
     min-height: auto;
-    grid-template-rows: 40px auto;
+    grid-template-rows: 48px auto;
   }
 
   .copy h1 {

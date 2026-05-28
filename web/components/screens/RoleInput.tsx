@@ -8,22 +8,31 @@ import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FunnelShell } from '@/components/screens/FunnelShell';
 import { inferRoleCategory } from '@/lib/utils/role-mapper';
-import type { SOCMatch, OnetTask, RoleCategory } from '@/types';
+import { normalizeRoleCategory } from '@/lib/profile/user-work-profile.mjs';
+import type { SOCMatch, OnetTask, RoleCategory, WorkContext } from '@/types';
 
 interface SocMatchResponse {
   primary: SOCMatch;
   alternatives: SOCMatch[];
 }
 
+const WORK_CONTEXT_OPTIONS: { value: WorkContext; label: string }[] = [
+  { value: 'startup', label: 'Startup' },
+  { value: 'MNC', label: 'MNC / Large enterprise' },
+  { value: 'agency', label: 'Agency / Consultancy' },
+  { value: 'freelance', label: 'Freelance / Independent' },
+];
+
 interface Props {
   savedInput?: string;
   savedMatch?: SOCMatch | null;
-  onConfirm: (soc: SOCMatch, tasks: OnetTask[], role: RoleCategory, input: string) => void;
+  onConfirm: (soc: SOCMatch, tasks: OnetTask[], role: RoleCategory, input: string, workContext: WorkContext) => void;
 }
 
 export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Props) {
   const router = useRouter();
   const [input, setInput] = useState(savedInput);
+  const [workContext, setWorkContext] = useState<WorkContext>('startup');
   const [isLoading, setIsLoading] = useState(false);
   const [match, setMatch] = useState<SocMatchResponse | null>(
     savedMatch ? { primary: savedMatch, alternatives: [] } : null
@@ -79,8 +88,9 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
       const res = await fetch(`/api/onet-tasks?soc=${encodeURIComponent(activeSoc.soc_code)}`);
       if (!res.ok) throw new Error('Failed to load role tasks');
       const data = await res.json() as { tasks: OnetTask[] };
-      const role = inferRoleCategory(activeSoc.soc_code, activeSoc.title);
-      onConfirm(activeSoc, data.tasks, role, input);
+      const inferredRole = inferRoleCategory(activeSoc.soc_code, activeSoc.title);
+      const role = normalizeRoleCategory(inferredRole, input, activeSoc.title) as RoleCategory;
+      onConfirm(activeSoc, data.tasks, role, input, workContext);
     } catch {
       setError('Failed to load role data. Please try again.');
     } finally {
@@ -135,7 +145,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
               className={cn(
                 'w-full h-[58px] rounded-[14px] border bg-white/95 py-0 pl-12 pr-5 text-base outline-none transition-[border-color,box-shadow,background-color]',
                 error
-                  ? 'border-[#b22c11]'
+                  ? 'border-[#ff6343]'
                   : 'border-[#ead0c9] focus:border-[#ff9b86] focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,99,67,0.09),0_10px_22px_rgba(26,28,28,0.04)]'
               )}
               style={{
@@ -144,7 +154,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
                 paddingLeft: 48,
                 paddingRight: 20,
                 boxShadow: error
-                  ? '0 0 0 4px rgba(178, 44, 17, 0.08)'
+                  ? '0 0 0 4px rgba(255, 99, 67, 0.08)'
                   : 'inset 0 1px 0 rgba(255, 255, 255, 0.82)',
               }}
             />
@@ -159,7 +169,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
                   {[0, 1, 2].map((i) => (
                     <motion.span
                       key={i}
-                      className="block size-[6px] rounded-full bg-[#b22c11]"
+                      className="block size-[6px] rounded-full bg-[#ff6343]"
                       animate={{ opacity: [0.25, 1, 0.25] }}
                       transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.25 }}
                     />
@@ -172,7 +182,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
           {error && (
             <p
               className="mt-3"
-              style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#b22c11' }}
+              style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#ff6343' }}
             >
               {error}
             </p>
@@ -202,7 +212,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
                       fontWeight: 800,
                       letterSpacing: '0.06em',
                       background: '#fff3f0',
-                      color: '#b22c11',
+                      color: '#ff6343',
                     }}
                   >
                     Matched role
@@ -233,13 +243,42 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center gap-2.5 border-t border-[#ecd7d1] pt-4" style={{ flexWrap: 'wrap', rowGap: 10 }}>
+              <div className="mt-5" style={{ paddingBottom: 10 }}>
+                <p style={{ fontFamily: 'var(--font-heading)', fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#5a413b', marginBottom: 8 }}>
+                  Where do you work?
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {WORK_CONTEXT_OPTIONS.map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setWorkContext(value)}
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: 13,
+                        fontWeight: workContext === value ? 600 : 400,
+                        padding: '6px 14px',
+                        borderRadius: 999,
+                        border: workContext === value ? '1.5px solid #ff6343' : '1px solid #e2bfb7',
+                        background: workContext === value ? '#fff3f0' : '#fffdfc',
+                        color: workContext === value ? '#ff6343' : '#5a413b',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2.5 border-t border-[#ecd7d1]" style={{ flexWrap: 'wrap', gap: 10, marginTop: 16, paddingTop: 16 }}>
                 <button
                   onClick={handleConfirm}
                   disabled={confirming}
                   className="flex h-9 items-center justify-center gap-1.5 rounded-full px-4 transition-colors disabled:opacity-60"
                   style={{
-                    background: confirming ? '#8d1700' : '#b22c11',
+                    background: confirming ? '#dd4d20' : '#ff6343',
                     color: 'white',
                     fontFamily: 'var(--font-heading)',
                     fontSize: 11,
@@ -248,7 +287,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
                     textTransform: 'uppercase',
                     minWidth: 112,
                     whiteSpace: 'nowrap',
-                    boxShadow: '0 6px 16px rgba(178, 44, 17, 0.16)',
+                    boxShadow: '0 6px 16px rgba(255, 99, 67, 0.16)',
                   }}
                 >
                   {confirming ? (

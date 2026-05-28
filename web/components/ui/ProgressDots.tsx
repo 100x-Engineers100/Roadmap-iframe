@@ -19,7 +19,7 @@ export function ProgressDots({ total = 5, current }: Props) {
             animate={{
               width: filled ? 8 : 6,
               height: filled ? 8 : 6,
-              backgroundColor: filled ? '#b22c11' : '#e2e2e2',
+              backgroundColor: filled ? '#ff6343' : '#e2e2e2',
             }}
             transition={{ duration: 0.2 }}
           />

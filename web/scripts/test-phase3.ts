@@ -6,7 +6,6 @@
 import { socMatch } from '../lib/llm/soc-match';
 import { validateSOCCode } from '../lib/api/onet';
 import { inferSkillGap } from '../lib/skill-gap/inference';
-import { getAllSkills } from '../lib/db/curriculum';
 
 let passed = 0;
 let failed = 0;
@@ -92,8 +91,7 @@ async function run() {
   // inferSkillGap('engineer') — S2.3 green, S2.2 red, 6-8 total
   console.log('\nTEST 3.4 — inferSkillGap for engineer');
   try {
-    const allSkills = await getAllSkills();
-    const gap = inferSkillGap('engineer', allSkills, [], {}, []);
+    const gap = inferSkillGap('engineer', [], {}, []);
 
     const total = gap.green.length + gap.red.length;
     assert(

@@ -50,7 +50,7 @@ export const ROLE_DISPLAY: Record<RoleCategory, string> = {
 export const DEPTH_STYLE: Record<RoadmapNode['depth'], { label: string; color: string; bg: string }> = {
   foundational: { label: 'Foundation', color: '#166534', bg: '#dcfce7' },
   intermediate: { label: 'Workflow', color: '#92400e', bg: '#fef3c7' },
-  advanced: { label: 'Project', color: '#b22c11', bg: '#fce8e6' },
+  advanced: { label: 'Project', color: '#ff6343', bg: '#fce8e6' },
 };
 
 export const DESKTOP_POINTS: Point[] = [
@@ -145,6 +145,15 @@ function sentenceForTerm(term: string): string {
 }
 
 export function getGlossaryTerms(roadmap: Roadmap, items: RoadmapNodeItem[]): RoadmapGlossaryTerm[] {
+  if (roadmap.terminology_primer?.terms?.length) {
+    return roadmap.terminology_primer.terms.slice(0, 18).map((term) => ({
+      term: term.term,
+      definition: term.plain_definition,
+      source_node_id: term.appears_in_node_ids[0],
+      group: 'terminology_primer',
+    }));
+  }
+
   if (roadmap.glossary?.length) {
     return roadmap.glossary.slice(0, 18);
   }

@@ -99,7 +99,7 @@ export function GapView({ skillGap, roleCategory, onAdvance }: GapViewProps) {
                 border: '1px solid rgba(226, 191, 183, 0.9)',
                 background: '#fffdfc',
                 boxShadow: '0 0 0 8px rgba(255, 99, 67, 0.08), 0 18px 32px rgba(26, 28, 28, 0.08)',
-                color: '#b22c11',
+                color: '#ff6343',
                 fontFamily: 'var(--font-heading)',
                 fontSize: 11,
                 fontWeight: 900,
@@ -119,7 +119,7 @@ export function GapView({ skillGap, roleCategory, onAdvance }: GapViewProps) {
             boxShadow: '4px 4px 0 rgba(226, 191, 183, 0.3), 0 18px 38px rgba(26, 28, 28, 0.045)',
             padding: 22,
           }}>
-            <p style={{ fontFamily: 'var(--font-heading)', fontSize: 12, fontWeight: 900, letterSpacing: '0.08em', color: '#b22c11', textTransform: 'uppercase', marginBottom: 16 }}>
+            <p style={{ fontFamily: 'var(--font-heading)', fontSize: 12, fontWeight: 900, letterSpacing: '0.08em', color: '#ff6343', textTransform: 'uppercase', marginBottom: 16 }}>
               AI-native {roleName}
             </p>
             <div className="grid gap-3">
@@ -166,7 +166,7 @@ export function GapView({ skillGap, roleCategory, onAdvance }: GapViewProps) {
           }}
         >
           <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: '#5a413b', lineHeight: 1.65 }}>
-            <strong style={{ color: '#b22c11' }}>{red.length} skill area{red.length !== 1 ? 's' : ''}</strong>{' '}
+            <strong style={{ color: '#ff6343' }}>{red.length} skill area{red.length !== 1 ? 's' : ''}</strong>{' '}
             stand between your current profile and the AI-native {roleName}.
             {' '}A focused 90-day plan closes this gap.
           </p>

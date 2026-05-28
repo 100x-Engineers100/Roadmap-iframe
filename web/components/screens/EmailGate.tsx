@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FunnelShell } from '@/components/screens/FunnelShell';
-import type { AiFamiliarity, OnetTask, RoleCategory, ScoreBand, SkillGapResult, TaskWeight, Roadmap } from '@/types';
+import type { AiFamiliarity, GapInferenceResult, OnetTask, RoleCategory, ScoreBand, SkillGapResult, TaskWeight, Roadmap, UserWorkProfile } from '@/types';
 
 interface EmailGateProps {
   roleCategory: RoleCategory;
@@ -15,6 +15,8 @@ interface EmailGateProps {
   taskWeights: Record<string, TaskWeight>;
   skillGap: SkillGapResult;
   aiFamiliarity: AiFamiliarity;
+  userProfile: UserWorkProfile | null;
+  gapInferenceResult?: GapInferenceResult | null;
   onRoadmapReady: (roadmap: Roadmap) => void;
 }
 
@@ -23,7 +25,7 @@ const ROLE_DISPLAY: Record<RoleCategory, string> = {
   sales: 'Sales Professional', engineer: 'Engineer', student: 'Student',
 };
 
-type FormStatus = 'idle' | 'loading' | 'success' | 'error';
+type FormStatus = 'idle' | 'loading' | 'success' | 'error' | 'generation_failed';
 
 function CheckIcon() {
   return (
@@ -36,7 +38,7 @@ function CheckIcon() {
 
 export function EmailGate({
   roleCategory, socCode, socTitle, riskScore, scoreBand,
-  tasks, taskWeights, skillGap, aiFamiliarity, onRoadmapReady,
+  tasks, taskWeights, skillGap, aiFamiliarity, userProfile, gapInferenceResult, onRoadmapReady,
 }: EmailGateProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -64,15 +66,22 @@ export function EmailGate({
           name: name.trim(), email: email.trim(),
           soc_code: socCode, soc_title: socTitle, role_category: roleCategory,
           risk_score: riskScore, score_band: scoreBand, task_weights: taskWeights,
+          user_profile: userProfile,
           skill_gap: skillGap.red,
           skills_have: skillGap.green,
           top_tasks: topTasks,
           ai_familiarity: aiFamiliarity,
+          gap_inference_result: gapInferenceResult ?? undefined,
         }),
       });
 
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
+        const data = (await res.json()) as { error?: string; code?: string; retryable?: boolean; detail?: string };
+        if (data.error === 'generation_failed') {
+          const error = new Error('generation_failed');
+          error.name = 'RoadmapGenerationFailed';
+          throw error;
+        }
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
 
@@ -80,8 +89,13 @@ export function EmailGate({
       setStatus('success');
       setTimeout(() => onRoadmapReady(data.roadmap), 700);
     } catch (err) {
+      if (err instanceof Error && (err.name === 'RoadmapGenerationFailed' || err.message === 'generation_failed')) {
+        setStatus('generation_failed');
+        setErrorMsg('Roadmap generation failed validation. Retry now and we will rebuild it from the locked blueprint.');
+        return;
+      }
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setErrorMsg('Something went wrong. Please try again.');
     }
   }
 
@@ -145,14 +159,14 @@ export function EmailGate({
                     boxSizing: 'border-box', background: '#ffffff',
                     transition: 'border-color 0.15s',
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = '#b22c11'; e.currentTarget.style.background = '#fff'; }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = '#ff6343'; e.currentTarget.style.background = '#fff'; }}
                   onBlur={(e) => { e.currentTarget.style.borderColor = '#e2bfb7'; e.currentTarget.style.background = '#fff'; }}
                 />
               </div>
             ))}
 
-            {status === 'error' && (
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#b22c11', margin: 0 }}>
+            {(status === 'error' || status === 'generation_failed') && (
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#ff6343', margin: 0 }}>
                 {errorMsg}
               </p>
             )}
@@ -171,9 +185,9 @@ export function EmailGate({
                 boxShadow: status !== 'loading' ? '0 4px 16px rgba(255,99,67,0.28)' : 'none',
                 marginTop: 4, willChange: 'transform',
               }}
-              whileTap={status === 'idle' ? { scale: 0.96 } : undefined}
+              whileTap={status !== 'loading' && status !== 'success' ? { scale: 0.96 } : undefined}
               onMouseEnter={(e) => {
-                if (status === 'idle') {
+                if (status === 'idle' || status === 'error' || status === 'generation_failed') {
                   e.currentTarget.style.backgroundColor = '#e5432a';
                   e.currentTarget.style.boxShadow = '0 6px 20px rgba(255,99,67,0.38)';
                 }
@@ -190,8 +204,13 @@ export function EmailGate({
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
               )}
-              {status === 'loading' ? 'GENERATING YOUR ROADMAP...' : status === 'success' ? '✓ ROADMAP READY!' : 'GET MY ROADMAP →'}
+              {status === 'loading' ? 'GENERATING YOUR ROADMAP...' : status === 'success' ? '✓ ROADMAP READY!' : status === 'generation_failed' ? 'TRY AGAIN NOW' : 'GET MY ROADMAP →'}
             </motion.button>
+            {(status === 'idle' || status === 'error' || status === 'generation_failed') && (
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: '#b8a09a', textAlign: 'center', margin: '4px 0 0' }}>
+                — takes ~1 minute to generate
+              </p>
+            )}
           </form>
 
           {/* Social proof */}

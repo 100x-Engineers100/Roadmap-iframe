@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateRoadmap } from '@/lib/llm/roadmap-gen';
+import { generateRoadmap, RoadmapGenerationError } from '@/lib/llm/roadmap-gen';
 
 export const dynamic = 'force-dynamic';
 import { insertLead } from '@/lib/db/leads';
-import type { AiFamiliarity, RoleCategory, ScoreBand, SkillCluster, TaskWeight } from '@/types';
+import type { GapInferenceResult, RoleCategory, ScoreBand, SkillCluster, TaskWeight, UserWorkProfile } from '@/types';
 
 interface LeadRequestBody {
   name: string;
@@ -16,8 +16,8 @@ interface LeadRequestBody {
   task_weights: Record<string, TaskWeight>;
   skill_gap: SkillCluster[];
   skills_have: SkillCluster[];
-  top_tasks: string[];
-  ai_familiarity: AiFamiliarity;
+  user_profile?: UserWorkProfile;
+  gap_inference_result?: GapInferenceResult;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -31,23 +31,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const {
     name, email, soc_code, soc_title, role_category,
     risk_score, score_band, task_weights, skill_gap, skills_have,
-    top_tasks, ai_familiarity,
+    user_profile, gap_inference_result,
   } = body as LeadRequestBody;
 
   if (!name || !email || !soc_code || !role_category) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const roadmap = await generateRoadmap(
-    role_category,
-    soc_title,
-    risk_score,
-    skill_gap ?? [],
-    skills_have ?? [],
-    top_tasks ?? [],
-    ai_familiarity ?? 'none'
-  );
+  if (!user_profile) {
+    return NextResponse.json({ error: 'Missing user_profile' }, { status: 400 });
+  }
 
+  // Capture lead before roadmap gen so data is never lost on failure
   try {
     await insertLead({
       name,
@@ -60,7 +55,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       task_weights,
       skill_gap: (skill_gap ?? []).map(c => c.id),
       skills_have: (skills_have ?? []).map(c => c.id),
-      roadmap,
+      roadmap: null,
       india_adjusted: false,
       sector: null,
       email_status: 'pending',
@@ -69,8 +64,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       email_seq_completed_at: null,
     });
   } catch (err) {
-    // DB failure must not block roadmap delivery
     console.error('insertLead failed:', err instanceof Error ? err.message : err);
+  }
+
+  let roadmap;
+  try {
+    roadmap = await generateRoadmap(user_profile, gap_inference_result);
+  } catch (err) {
+    console.error('generateRoadmap failed:', err instanceof Error ? err.message : err);
+    if (err instanceof RoadmapGenerationError) {
+      return NextResponse.json({
+        error: 'generation_failed',
+        code: 'roadmap_generation_failed',
+        retryable: true,
+        detail: err.message,
+      }, { status: 502 });
+    }
+    return NextResponse.json({
+      error: 'generation_failed',
+      code: 'roadmap_generation_failed',
+      retryable: true,
+    }, { status: 502 });
   }
 
   const brevoKey = process.env.BREVO_API_KEY;

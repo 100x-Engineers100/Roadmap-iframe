@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { FunnelShell, funnelStyles } from '@/components/screens/FunnelShell';
+import { getDisplayTasks } from '@/lib/api/onet-utils.mjs';
 import type { AiFamiliarity, OnetTask, TaskWeight } from '@/types';
 
 const WEIGHT_MAP: Record<number, TaskWeight> = { 0: 'low', 1: 'medium', 2: 'high' };
@@ -20,8 +21,9 @@ const AI_SKILLS: { label: string; clusterIds: string[] }[] = [
 
 const Q1_OPTIONS: { value: AiFamiliarity; label: string }[] = [
   { value: 'none', label: "Not yet — I'm getting started" },
-  { value: 'casual', label: '1–6 months — using tools like ChatGPT' },
-  { value: 'building', label: '6+ months — building AI into my work' },
+  { value: 'basic', label: '1–6 months — using tools like ChatGPT' },
+  { value: 'intermediate', label: '6+ months — building AI into my work' },
+  { value: 'advanced', label: '1+ year — building AI systems or agents' },
 ];
 
 // ── Shared style tokens ──────────────────────────────────────────────────────
@@ -40,7 +42,7 @@ const sectionLabel: CSSProperties = {
   fontWeight: 600,
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#b22c11',
+  color: '#ff6343',
   marginBottom: 10,
 };
 
@@ -60,7 +62,7 @@ const rowStyle: CSSProperties = {
 };
 
 const controlStyle: CSSProperties = {
-  accentColor: '#b22c11',
+  accentColor: '#ff6343',
   width: 16,
   height: 16,
   flexShrink: 0,
@@ -92,12 +94,12 @@ function TaskSliderItem({ task, value, onChange }: {
       <div style={{ position: 'relative', paddingTop: 7 }}>
         <div style={{ position: 'relative', height: 5, background: '#e2e2e2', borderRadius: 9999, pointerEvents: 'none' }}>
           <motion.div
-            style={{ position: 'absolute', left: 0, top: 0, height: '100%', background: '#b22c11', borderRadius: 9999 }}
+            style={{ position: 'absolute', left: 0, top: 0, height: '100%', background: '#ff6343', borderRadius: 9999 }}
             animate={{ width: `${fillPct}%` }}
             transition={{ duration: 0.15 }}
           />
           <motion.div
-            style={{ position: 'absolute', top: '50%', translateY: '-50%', width: 20, height: 20, borderRadius: 9999, border: '2px solid #b22c11', background: '#fff', marginLeft: -9 }}
+            style={{ position: 'absolute', top: '50%', translateY: '-50%', width: 20, height: 20, borderRadius: 9999, border: '2px solid #ff6343', background: '#fff', marginLeft: -9 }}
             animate={{ left: `${fillPct}%` }}
             transition={{ duration: 0.15 }}
           />
@@ -114,7 +116,7 @@ function TaskSliderItem({ task, value, onChange }: {
 
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         {(['LOW', 'MED', 'HIGH'] as const).map((label, i) => (
-          <span key={label} style={{ fontFamily: 'var(--font-heading)', fontSize: 10, fontWeight: 500, letterSpacing: '0.05em', color: i === idx ? '#b22c11' : '#5a413b', textTransform: 'uppercase' }}>
+          <span key={label} style={{ fontFamily: 'var(--font-heading)', fontSize: 10, fontWeight: 500, letterSpacing: '0.05em', color: i === idx ? '#ff6343' : '#5a413b', textTransform: 'uppercase' }}>
             {label}
           </span>
         ))}
@@ -137,10 +139,7 @@ export function TaskSliders({ tasks, weights, onBack, onSubmit }: Props) {
   const [aiFamiliarity, setAiFamiliarity] = useState<AiFamiliarity>('none');
   const [confirmedClusterIds, setConfirmedClusterIds] = useState<string[]>([]);
 
-  // Top 4 by importance; if all zero show all (O*NET edge case)
-  const displayTasks = tasks.every(t => t.importance === 0)
-    ? tasks
-    : [...tasks].sort((a, b) => b.importance - a.importance).slice(0, 4);
+  const displayTasks = getDisplayTasks(tasks);
 
   function toggleCluster(clusterIds: string[]) {
     setConfirmedClusterIds(prev => {
