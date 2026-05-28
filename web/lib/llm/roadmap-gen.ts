@@ -164,8 +164,8 @@ export async function generateRoadmap(
     profile.role_archetype === 'founder' ? 'founder_pm' : profile.role_category;
   const validation = validateRoadmap(roadmap, { audience: validationAudience });
 
-  if ((validation.warnings?.length ?? 0) > 0) {
-    console.warn(`validateRoadmap warnings [${validationAudience}]: ${validation.warnings?.map(i => i.code).join(', ')}`);
+  if (validation.warnings.length > 0) {
+    console.warn(`validateRoadmap warnings [${validationAudience}]: ${validation.warnings.map(i => i.code).join(', ')}`);
   }
 
   if (!validation.valid) {
