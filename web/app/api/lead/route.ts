@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateRoadmap, RoadmapGenerationError } from '@/lib/llm/roadmap-gen';
 
 export const dynamic = 'force-dynamic';
-import { insertLead } from '@/lib/db/leads';
+import { insertLead, updateLeadRoadmap } from '@/lib/db/leads';
+import { scheduleEmailSequence } from '@/lib/email/schedule-sequence';
+import { sendEmailJob } from '@/lib/email/send-job';
 import type { GapInferenceResult, RoleCategory, ScoreBand, SkillCluster, TaskWeight, UserWorkProfile } from '@/types';
 
 interface LeadRequestBody {
@@ -43,8 +45,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Capture lead before roadmap gen so data is never lost on failure
+  let leadId: string | null = null;
   try {
-    await insertLead({
+    const lead = await insertLead({
       name,
       email,
       soc_code,
@@ -63,6 +66,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       email_seq_started_at: null,
       email_seq_completed_at: null,
     });
+    leadId = lead.id;
   } catch (err) {
     console.error('insertLead failed:', err instanceof Error ? err.message : err);
   }
@@ -85,6 +89,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       code: 'roadmap_generation_failed',
       retryable: true,
     }, { status: 502 });
+  }
+
+  if (leadId) {
+    try {
+      await updateLeadRoadmap(leadId, roadmap);
+    } catch (err) {
+      console.error('updateLeadRoadmap failed:', err instanceof Error ? err.message : err);
+    }
+
+    // Schedule 3-step sequence, then fire immediate email as fire-and-forget
+    try {
+      const step0Job = await scheduleEmailSequence(leadId, email, new Date());
+      sendEmailJob(step0Job, roadmap, role_category, soc_title).catch((err: unknown) => {
+        console.error('immediate email send failed:', err instanceof Error ? err.message : err);
+      });
+    } catch (err) {
+      console.error('scheduleEmailSequence failed:', err instanceof Error ? err.message : err);
+    }
   }
 
   const brevoKey = process.env.BREVO_API_KEY;

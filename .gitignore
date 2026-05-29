@@ -2,17 +2,30 @@
 *.json
 .claude/
 !web/package.json
+!web/package-lock.json
 !web/tsconfig.json
+!web/vercel.json
 .env
 .env.local
 .env*.local
+
+# scoring reference doc (internal)
+SCORING.md
 
 # internal planning docs
 claude/
 codex/
 tasks/
+memory/
+memory.md
+Research_doc/
 design.md
+CLAUDE.md
 MASTER_SPEC.md
+PIPELINE_ANALYSIS.md
+ROADMAP_BUILD_DOC.md
+PRE_PHASE7_SESSION_PROMPT.md
+ZENO_CURRICULUM_DOC.md
 old - roadmap_design.md
 old - roadmap-implementation-plan.md
 PRD_AI_Risk_Tool.md
@@ -25,6 +38,8 @@ UI_OVERHAUL_PLAN.md
 TUES_4_FIXES.md
 SATURDAY_TODO.md
 ROADMAP_FIX_SPEC.md
+codex- final - PRODUCTION_ROADMAP_REBUILD_PLAN.md
+claude web roadmap-findings-doc.md
 WhatsApp Image 2026-05-06 at 10.16.01 PM.jpeg
 ss/
 docs/
