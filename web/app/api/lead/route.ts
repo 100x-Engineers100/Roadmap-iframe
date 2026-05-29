@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateRoadmap, RoadmapGenerationError } from '@/lib/llm/roadmap-gen';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 import { insertLead, updateLeadRoadmap } from '@/lib/db/leads';
 import { scheduleEmailSequence } from '@/lib/email/schedule-sequence';
 import { sendEmailJob } from '@/lib/email/send-job';
