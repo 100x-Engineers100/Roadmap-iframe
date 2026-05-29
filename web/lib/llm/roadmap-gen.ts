@@ -94,6 +94,9 @@ function checkpointForPhase(
 }
 
 function blueprintToRoadmap(blueprint: RoadmapBlueprint): Roadmap {
+  if (!blueprint.phases || blueprint.phases.length < 3) {
+    throw new Error(`blueprintToRoadmap: expected 3 phases, got ${blueprint.phases?.length ?? 0}`);
+  }
   const [phase1, phase2, phase3] = blueprint.phases;
 
   const stepFromPhase = (phase: typeof blueprint.phases[number], index: number): RoadmapStep => ({
