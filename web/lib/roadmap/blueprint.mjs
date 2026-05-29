@@ -4,7 +4,7 @@
  * No LLM call. All structure is deterministic.
  * Uses gap-inference nodes if provided; falls back to sliceByFamiliarity().
  */
-import { sliceByFamiliarity } from './aaa-phase-map.mjs';
+import { sliceByFamiliarity, AAA_PHASE_MAP } from './aaa-phase-map.mjs';
 import { buildNodePanel } from './panel-blueprint.mjs';
 import {
   buildTerminologyPrimerFromContent,
@@ -83,7 +83,23 @@ function buildNodeId(roleCategory, idx) {
 /**
  * Convert a GapInferenceNode → gap-like object that buildNodePanel accepts.
  */
-function adaptGapNode(gapNode, roleCategory, roleArchetype) {
+function adaptGapNode(gapNode, roleCategory, roleArchetype, usedSkillIds = new Set()) {
+  let skill_ids = gapNode.skill_ids ?? [];
+  // When gap inference assigns fewer than 3 skill_ids, merge the nearest AAA_PHASE_MAP
+  // cluster — but only if that cluster has skills not already consumed by a prior node.
+  // Without this guard, all single-skill nodes in the same cluster collapse to identical
+  // skill_id sets, producing duplicate node content.
+  if (skill_ids.length < 3) {
+    const roleMap = AAA_PHASE_MAP[roleCategory] ?? [];
+    const match = roleMap.find(entry =>
+      entry.skill_ids.some(s => skill_ids.includes(s)) &&
+      entry.skill_ids.some(s => !usedSkillIds.has(s))
+    );
+    if (match && match.skill_ids.length > skill_ids.length) {
+      skill_ids = [...new Set([...skill_ids, ...match.skill_ids])];
+    }
+  }
+  skill_ids.forEach(s => usedSkillIds.add(s));
   const allowedTools = gapNode.tools?.length > 0
     ? gapNode.tools
     : (ROLE_TOOLS[roleCategory] ?? ROLE_TOOLS.student);
@@ -92,7 +108,7 @@ function adaptGapNode(gapNode, roleCategory, roleArchetype) {
     role_category: roleCategory,
     role_archetype: roleArchetype ?? roleCategory,
     capability: gapNode.title,
-    skill_ids: gapNode.skill_ids,
+    skill_ids,
     why_selected: gapNode.why_for_this_person ?? '',
     allowed_tools: allowedTools,
     forbidden_tools: [],
@@ -147,81 +163,51 @@ function buildNodeFromGap(gapLike, idx, allIds, aaa_phase) {
 
 function buildProjectCheckpoints(nodes, roleCategory) {
   const n = nodes.length;
-  const midIdx = Math.floor(n / 2);
-  const mini1After = nodes.slice(0, 2).map(nd => nd.id);
-  const mini2After = nodes.slice(1, midIdx + 1).map(nd => nd.id);
-  const finalAfter = nodes.map(nd => nd.id);
+  // Mini1 after index 1 (≤6 nodes) or index 2 (>6 nodes)
+  const mini1Idx = n <= 6 ? 1 : 2;
+  // Mini2 always 2 nodes after Mini1, capped so Capstone has room
+  const mini2Idx = Math.min(mini1Idx + 2, n - 2);
 
-  const tools1 = nodes[0]?.panel?.checkpoint?.tools?.slice(0, 2) ?? ['Claude'];
-  const tools2 = nodes[Math.min(2, n - 1)]?.panel?.checkpoint?.tools?.slice(0, 2) ?? ['n8n', 'Claude'];
-  const toolsFinal = [...new Set(nodes.flatMap(nd => nd.panel?.checkpoint?.tools ?? []))].slice(0, 4);
+  const getTools = (upToIdx) =>
+    [...new Set(nodes.slice(0, upToIdx + 1).flatMap(nd => nd.panel?.checkpoint?.tools ?? []))].slice(0, 4);
+
+  const emptyStub = () => ({
+    title: '',
+    objective: '',
+    scenario: '',
+    tasks: [],
+    what_youll_learn: [],
+    core_components: [],
+    success_criteria: [],
+    deliverables: [],
+  });
 
   return [
     {
       id: `mini-1-${roleCategory}`,
       type: 'mini_project',
-      after_node_ids: mini1After,
-      title: 'Assisted Phase Sprint',
-      goal: 'Prove you can apply the first two capabilities to a real task without tutorial guidance.',
-      description: `Use the skills from the first two nodes to complete one real work output. Not a tutorial exercise — solve an actual problem from your work context.`,
-      concepts_checked: nodes.slice(0, 2).map(nd => nd.title),
-      artifact_to_build: 'A real work output that uses at least one tool from each of the first two nodes.',
-      steps: [
-        `Pick one real task from your work that the first two nodes address.`,
-        `Apply at least one skill from node 1 and one from node 2 to complete the task.`,
-        `Document the tools used and time saved vs your previous manual approach.`,
-      ],
-      done_when: [
-        'You produced a real work artifact without following a tutorial step-by-step.',
-        'The artifact uses tools from both of the first two nodes.',
-      ],
-      tools: tools1,
-      time_est: '2-3 hrs',
+      after_node_ids: nodes.slice(0, mini1Idx + 1).map(nd => nd.id),
+      tools: getTools(mini1Idx),
+      concepts_covered: nodes.slice(0, mini1Idx + 1).map(nd => nd.title),
+      ...emptyStub(),
     },
     {
       id: `mini-2-${roleCategory}`,
       type: 'mini_project',
-      after_node_ids: mini2After,
-      title: 'Accelerated Phase Sprint',
-      goal: 'Prove you can combine mid-roadmap capabilities into one workflow that runs with minimal manual steps.',
-      description: 'Build a lightweight workflow that chains accelerated-phase skills. The workflow should run with one trigger and produce a useful output.',
-      concepts_checked: nodes.slice(1, midIdx + 1).map(nd => nd.title),
-      artifact_to_build: 'A working workflow combining accelerated-phase skills that runs with one manual trigger.',
-      steps: [
-        'Map the data flow between the accelerated-phase skills.',
-        'Build the workflow in your chosen tool (n8n or equivalent).',
-        'Test with 3 real inputs and document the outputs.',
-      ],
-      done_when: [
-        'The workflow runs end-to-end with one trigger and produces a useful output.',
-        'You can explain the connection between the chained capabilities to a peer.',
-      ],
-      tools: tools2,
-      time_est: '2-3 hrs',
+      after_node_ids: nodes.slice(0, mini2Idx + 1).map(nd => nd.id),
+      tools: getTools(mini2Idx),
+      concepts_covered: nodes.slice(mini1Idx + 1, mini2Idx + 1).map(nd => nd.title),
+      ...emptyStub(),
     },
     {
-      id: `final-${roleCategory}`,
+      id: `capstone-${roleCategory}`,
       type: 'final_project',
-      after_node_ids: finalAfter,
-      title: 'AI-Native Portfolio Project',
-      goal: 'Prove end-to-end mastery by building a real-world project combining capabilities from all three AAA phases.',
-      description: `Design and build a complete AI-native workflow that addresses a real problem from your work context. Portfolio-ready.`,
-      concepts_checked: nodes.map(nd => nd.title),
-      artifact_to_build: `A complete, working AI-native project combining at least ${Math.min(4, n)} of the ${n} node capabilities.`,
-      steps: [
-        'Define the real problem from your work that this project will solve.',
-        'Map which node capabilities contribute to the solution.',
-        'Build the solution step-by-step, one capability at a time.',
-        'Test with real inputs from your work context.',
-        'Document what each AI component does and what it replaced.',
-      ],
-      done_when: [
-        'The project solves a real problem from your work context, not a tutorial scenario.',
-        `At least ${Math.min(4, n)} capabilities from your roadmap are visible in the project.`,
-        'You can demo the project to a peer and explain every component.',
-      ],
-      tools: toolsFinal.length > 0 ? toolsFinal : ['Claude', 'n8n'],
-      time_est: '4-6 hrs',
+      after_node_ids: nodes.map(nd => nd.id),
+      tools: getTools(n - 1),
+      concepts_covered: nodes.map(nd => nd.title),
+      ...emptyStub(),
+      bonus_challenges: [],
+      reflection_questions: [],
     },
   ];
 }
@@ -264,12 +250,14 @@ export function buildRoadmapBlueprint(userProfile, gapInferenceResult) {
 
   const hasValidInference = gapInferenceResult?.nodes?.length >= 5;
 
+  const usedSkillIds = new Set();
+
   if (hasValidInference) {
     gapInferenceNodes = gapInferenceResult.nodes;
     journeyAnalogy = gapInferenceResult.journey_analogy;
     gapNodes = gapInferenceResult.nodes.map(gn => ({
       aaa_phase: gn.aaa_phase,
-      gapLike: adaptGapNode(gn, role_category, role_archetype),
+      gapLike: adaptGapNode(gn, role_category, role_archetype, usedSkillIds),
     }));
   } else {
     const phaseNodes = sliceByFamiliarity(role_category, ai_familiarity ?? 'none');
@@ -284,7 +272,10 @@ export function buildRoadmapBlueprint(userProfile, gapInferenceResult) {
     gapNodes = phaseNodes.map(pn => ({
       aaa_phase: pn.phase,
       gapLike: buildFallbackGapNode(pn, role_category, role_archetype),
+      // Fallback nodes come from AAA_PHASE_MAP directly — already distinct by construction.
+      // Register their skill_ids so any later adaptGapNode calls see them as used.
     }));
+    gapNodes.forEach(({ gapLike }) => gapLike.skill_ids.forEach(s => usedSkillIds.add(s)));
   }
 
   // ── Build nodes ─────────────────────────────────────────────────────────────

@@ -4,6 +4,22 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { RoadmapGlossaryTerm } from '@/types';
 
+function GlossaryDefinition({ text }: { text: string }) {
+  const trimmed = text.trim();
+  const isBulletList = /^[-•]\s/.test(trimmed) || /\n\s*[-•]\s/.test(trimmed);
+  if (isBulletList) {
+    const lines = trimmed.split('\n').map(l => l.trim()).filter(Boolean);
+    return (
+      <ul className="glossary-def-list">
+        {lines.map((line, i) => (
+          <li key={i}>{line.replace(/^[-•]\s+/, '')}</li>
+        ))}
+      </ul>
+    );
+  }
+  return <p>{text}</p>;
+}
+
 interface RoadmapGlossaryPanelProps {
   terms: RoadmapGlossaryTerm[];
   open: boolean;
@@ -49,9 +65,8 @@ export function RoadmapGlossaryPanel({ terms, open, onClose }: RoadmapGlossaryPa
                   <article className="glossary-term" key={`${term.term}-${term.source_node_id ?? 'global'}`}>
                     <div>
                       <h4>{term.term}</h4>
-                      {term.group && <span>{term.group}</span>}
                     </div>
-                    <p>{term.definition}</p>
+                    <GlossaryDefinition text={term.definition} />
                   </article>
                 ))}
               </div>

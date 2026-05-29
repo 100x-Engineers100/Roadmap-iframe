@@ -82,26 +82,6 @@ export interface UserWorkProfile {
   confirmed_cluster_ids: string[];
 }
 
-export interface ProjectNode {
-  id: string;
-  node_kind: 'mini_project' | 'capstone';
-  level: 'beginner' | 'advanced';
-  after_node_ids: string[];
-  title: string;
-  time_est: string;
-  tools: string[];
-  concepts_covered: string[];
-  objective: string;
-  scenario: string;
-  tasks: string[];
-  twist: string;
-  what_youll_learn: string[];
-  core_components: string[];
-  success_criteria: string[];
-  deliverables: string[];
-  bonus_challenges?: string[];
-  reflection_questions?: string[];
-}
 
 export interface CapabilityGap {
   id: string;
@@ -151,7 +131,6 @@ export interface PanelAtom {
   learner_action: string;
   output: string;
   tools: string[];
-  time_est: string;
 }
 
 export interface PanelExpansion {
@@ -183,7 +162,6 @@ export interface NodeCheckpoint {
   steps: string[];
   done_when: string[];
   tools: string[];
-  time_est: string;
   confidence_check: string;
 }
 
@@ -210,15 +188,21 @@ export interface ProjectCheckpoint {
   id: string;
   type: ProjectCheckpointType;
   after_node_ids: string[];
-  title: string;
-  goal: string;
-  description: string;
-  concepts_checked: string[];
-  artifact_to_build: string;
-  steps: string[];
-  done_when: string[];
+  // deterministic fields
   tools: string[];
-  time_est: string;
+  concepts_covered: string[];
+  // LLM-filled fields
+  title: string;
+  objective: string;
+  scenario: string;
+  tasks: string[];
+  what_youll_learn: string[];
+  core_components: string[];
+  success_criteria: string[];
+  deliverables: string[];
+  // capstone only
+  bonus_challenges?: string[];
+  reflection_questions?: string[];
 }
 
 export interface RoadmapAnalogyLens {
@@ -233,7 +217,6 @@ export interface RoadmapSubnode {
   description: string;
   outcome: string;
   tools?: string[];
-  time_est?: string;
 }
 
 export interface RoadmapNode {
@@ -261,7 +244,7 @@ export interface RoadmapNode {
   /** @deprecated Replaced by panel.expansion.right_items. */
   concepts_right: string[];
   /** @deprecated Replaced by panel.analogy with roadmap-level analogy lens. */
-  analogy: { base: string; role_skin: string; bridge_line: string };
+  analogy: { base: string; role_skin: string };
 }
 
 export interface RoadmapBlueprintNode {
@@ -313,7 +296,6 @@ export interface RoadmapStep {
     concepts: string[];
     problem_statement: string;
     done_criteria: string;
-    time_est: string;
   };
 }
 

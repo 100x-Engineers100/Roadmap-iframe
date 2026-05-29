@@ -16,17 +16,18 @@ export interface LLMCallParams {
 }
 
 // const ANTHROPIC_MODEL = "claude-sonnet-4-6";  // uncomment when switching to Anthropic
-const OPENAI_MODEL = "gpt-4.1-mini";
+const OPENAI_MODEL = "gpt-5.4-mini";
 
 export async function callLLM(params: LLMCallParams): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
   if (!key || key === "REPLACE_ME") throw new Error("OPENAI_API_KEY not set");
 
   const client = new OpenAI({ apiKey: key });
+  // gpt-5.4-mini is a reasoning model: max_completion_tokens replaces max_tokens,
+  // and temperature is not supported — omit it entirely.
   const res = await client.chat.completions.create({
     model: OPENAI_MODEL,
-    temperature: params.temperature,
-    max_tokens: params.maxTokens,
+    max_completion_tokens: params.maxTokens,
     messages: [
       { role: "system", content: params.system },
       { role: "user", content: params.user },

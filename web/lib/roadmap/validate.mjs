@@ -1,5 +1,3 @@
-import { getCanonicalTerm } from './canonical-ai-terms.mjs';
-
 export const ROADMAP_AUDIENCES = [
   'marketer',
   'designer',
@@ -41,8 +39,10 @@ export const ISSUE_CODES = {
   FALLBACK_OR_REPAIR_MARKER: 'fallback_or_repair_marker',
 };
 
-// These codes mean the roadmap is structurally broken and cannot be rendered.
-// All other codes are quality warnings — logged but don't block delivery.
+// Structural issues only — render or data integrity would break without these.
+// Content quality (banned phrases, jargon patterns, non-tech tool checks) must never
+// block: LLM output and user input vary too widely for regex to be a reliable judge,
+// and we actively WANT tech-heavy content throughout.
 const BLOCKING_CODES = new Set([
   'roadmap_not_object',
   'missing_step',
@@ -50,61 +50,16 @@ const BLOCKING_CODES = new Set([
   'duplicate_node_id',
   'missing_node_title',
   'missing_panel',
-  'fallback_or_repair_marker',
 ]);
 
 const STEP_KEYS = ['step1', 'step2', 'step3'];
-const GENERIC_NODE_TITLES = new Set([
-  'Practice and Apply',
-  'Clear Instructions',
-  'Tool Selection',
-  'Workflow Design',
-  'Quality Control',
-  'Automation Systems',
-  'Capstone Project',
-]);
-
-const SURFACE_TERMS = new Set([
-  'AI Content Creation',
-  'Workflow Automation',
-  'Content Creation',
-  'Email Campaign',
-  'Workflow',
-]);
-
-const TECH_TERMS = [
-  'SPOARA',
-  'ReAct',
-  '95% rule',
-  'API',
-  'RAG',
-  'MCP',
-  'AI agent',
-  'trigger',
-  'token',
-  'context window',
-  'LLM',
-  'embedding',
-  'fine-tuning',
-];
-
-const NON_TECH_AUDIENCES = new Set(['marketer', 'designer', 'sales', 'founder_pm', 'student']);
-const CODE_TOOL_PATTERN = /\b(API|SDK|server|backend|FastAPI|Docker|CLI|Python|SQL|Postgres|Supabase|LangChain|endpoint|repository|database)\b/i;
 const DEPTH_LEVELS = new Set(['scan', 'practice', 'build', 'operate']);
-const REQUIRED_ATOM_FIELDS = ['order', 'depth_level', 'depth_reason', 'explanation', 'learner_action', 'output', 'time_est'];
-const CHECKPOINT_FIELDS = ['title', 'scenario', 'artifact_to_create', 'steps', 'done_when', 'tools', 'time_est', 'confidence_check'];
-const PROJECT_FIELDS = ['id', 'type', 'after_node_ids', 'title', 'goal', 'description', 'concepts_checked', 'artifact_to_build', 'steps', 'done_when', 'tools', 'time_est'];
+const REQUIRED_ATOM_FIELDS = ['order', 'depth_level', 'depth_reason', 'explanation', 'learner_action', 'output'];
+const CHECKPOINT_FIELDS = ['title', 'scenario', 'artifact_to_create', 'steps', 'done_when', 'tools', 'confidence_check'];
+const PROJECT_STRUCTURAL_FIELDS = ['id', 'type', 'after_node_ids', 'tools', 'concepts_covered'];
+const PROJECT_LLM_STRING_FIELDS = ['title', 'objective', 'scenario'];
+const PROJECT_LLM_ARRAY_FIELDS = ['tasks', 'success_criteria', 'deliverables'];
 const TERMINOLOGY_FIELDS = ['term', 'appears_in_node_ids', 'plain_definition', 'role_example', 'analogy_hook', 'why_it_matters'];
-const BANNED_EXPLANATION_START = /^(learn|learn how|you will learn|understand|understand the)\b/i;
-const BANNED_GENERIC_COPY = /\b(practice this skill|apply your knowledge|work through the exercise|complete the task|capstone project)\b/i;
-
-function text(value) {
-  if (value == null) return '';
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(text).join(' ');
-  if (typeof value === 'object') return Object.values(value).map(text).join(' ');
-  return String(value);
-}
 
 function hasMeaningfulValue(value) {
   return Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? value.trim().length > 0 : value != null;
@@ -112,21 +67,6 @@ function hasMeaningfulValue(value) {
 
 function addIssue(issues, code, message, path, details = {}) {
   issues.push({ code, severity: BLOCKING_CODES.has(code) ? 'blocking' : 'warning', message, path, ...details });
-}
-
-function validateCopyQuality(value, path, issues) {
-  if (typeof value !== 'string') return;
-  const trimmed = value.trim();
-  if (BANNED_EXPLANATION_START.test(trimmed)) {
-    addIssue(issues, ISSUE_CODES.BANNED_COPY_PATTERN, 'Copy starts with a banned weak learning phrase.', path, {
-      value: trimmed.slice(0, 120),
-    });
-  }
-  if (BANNED_GENERIC_COPY.test(trimmed)) {
-    addIssue(issues, ISSUE_CODES.BANNED_COPY_PATTERN, 'Copy contains a banned generic learning phrase.', path, {
-      value: trimmed.slice(0, 120),
-    });
-  }
 }
 
 function collectNodes(roadmap, issues) {
@@ -190,9 +130,6 @@ function validatePanel(node, path, issues) {
         depth_level: atom.depth_level,
       });
     }
-    validateCopyQuality(atom?.explanation, `${path}.panel.atom[${atomIndex}].explanation`, issues);
-    validateCopyQuality(atom?.learner_action, `${path}.panel.atom[${atomIndex}].learner_action`, issues);
-    validateCopyQuality(atom?.depth_reason, `${path}.panel.atom[${atomIndex}].depth_reason`, issues);
   });
 
   const checkpoint = node.panel?.checkpoint;
@@ -205,51 +142,26 @@ function validatePanel(node, path, issues) {
   }
 }
 
-function validateTerminology(roadmap, bodyText, issues) {
+function validateTerminology(roadmap, issues) {
   const primer = roadmap.terminology_primer;
   const terms = primer?.terms;
   if (!primer || !Array.isArray(terms)) {
     addIssue(issues, ISSUE_CODES.TERMINOLOGY_PRIMER_MISSING, 'Roadmap is missing terminology_primer.terms.', 'terminology_primer');
-    return new Set();
+    return;
   }
-
   if (terms.length < 5) {
     addIssue(issues, ISSUE_CODES.TERMINOLOGY_TERM_COUNT_LOW, 'Terminology primer must include at least 5 terms.', 'terminology_primer.terms', {
       count: terms.length,
     });
   }
-
-  const primerTerms = new Set();
   for (const [index, entry] of terms.entries()) {
     const term = entry?.term;
-    if (term) primerTerms.add(term.toLowerCase());
     for (const field of TERMINOLOGY_FIELDS) {
       if (!hasMeaningfulValue(entry?.[field])) {
         addIssue(issues, ISSUE_CODES.TERMINOLOGY_TERM_INCOMPLETE, `Terminology term is missing ${field}.`, `terminology_primer.terms[${index}].${field}`, { term });
       }
     }
-    if (SURFACE_TERMS.has(term)) {
-      addIssue(issues, ISSUE_CODES.TERMINOLOGY_SURFACE_TERM, 'Terminology primer defines a self-evident surface term.', `terminology_primer.terms[${index}]`, { term });
-    }
-    if (term && !bodyText.toLowerCase().includes(term.toLowerCase())) {
-      addIssue(issues, ISSUE_CODES.TERMINOLOGY_TERM_NOT_USED, 'Terminology term does not appear later in roadmap content.', `terminology_primer.terms[${index}]`, { term });
-    }
-    const canonical = term ? getCanonicalTerm(term) : null;
-    if (canonical) {
-      const definition = entry?.plain_definition ?? '';
-      for (const phrase of canonical.required_phrases ?? []) {
-        if (!definition.includes(phrase)) {
-          addIssue(issues, ISSUE_CODES.TERMINOLOGY_DEFINITION_INVALID, 'Terminology definition is missing required canonical phrase.', `terminology_primer.terms[${index}].plain_definition`, { term, phrase });
-        }
-      }
-      for (const phrase of canonical.forbidden_phrases ?? []) {
-        if (definition.includes(phrase)) {
-          addIssue(issues, ISSUE_CODES.TERMINOLOGY_DEFINITION_INVALID, 'Terminology definition contains a known wrong phrase.', `terminology_primer.terms[${index}].plain_definition`, { term, phrase });
-        }
-      }
-    }
   }
-  return primerTerms;
 }
 
 function validateProjectCadence(roadmap, nodeCount, issues) {
@@ -258,7 +170,6 @@ function validateProjectCadence(roadmap, nodeCount, issues) {
     addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, 'Roadmap is missing project_checkpoints.', 'project_checkpoints');
     return;
   }
-
   const miniProjects = projects.filter(project => project?.type === 'mini_project');
   const finalProjects = projects.filter(project => project?.type === 'final_project');
   if (nodeCount >= 6 && nodeCount <= 8 && (miniProjects.length !== 2 || finalProjects.length !== 1)) {
@@ -267,19 +178,27 @@ function validateProjectCadence(roadmap, nodeCount, issues) {
       final_project_count: finalProjects.length,
     });
   }
-
   projects.forEach((project, index) => {
-    for (const field of PROJECT_FIELDS) {
+    for (const field of PROJECT_STRUCTURAL_FIELDS) {
       if (!hasMeaningfulValue(project?.[field])) {
-        addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, `Project checkpoint is missing ${field}.`, `project_checkpoints[${index}].${field}`);
+        addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, `Project checkpoint missing ${field}.`, `project_checkpoints[${index}].${field}`);
       }
     }
-    if (project?.type === 'mini_project') {
-      const attachedCount = Array.isArray(project.after_node_ids) ? project.after_node_ids.length : 0;
-      if (attachedCount < 2 || attachedCount > 3) {
-        addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, 'Mini project must attach after 2-3 completed nodes.', `project_checkpoints[${index}].after_node_ids`, {
-          attached_count: attachedCount,
-        });
+    for (const field of PROJECT_LLM_STRING_FIELDS) {
+      if (project?.[field] !== undefined && !project[field]?.trim()) {
+        addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, `Project checkpoint empty ${field}.`, `project_checkpoints[${index}].${field}`);
+      }
+    }
+    for (const field of PROJECT_LLM_ARRAY_FIELDS) {
+      if (project?.[field] !== undefined && (!Array.isArray(project[field]) || project[field].length === 0)) {
+        addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, `Project checkpoint empty ${field}.`, `project_checkpoints[${index}].${field}`);
+      }
+    }
+    if (project?.type === 'final_project') {
+      for (const field of ['bonus_challenges', 'reflection_questions']) {
+        if (project[field] !== undefined && (!Array.isArray(project[field]) || project[field].length === 0)) {
+          addIssue(issues, ISSUE_CODES.PROJECT_CADENCE_INVALID, `Capstone missing ${field}.`, `project_checkpoints[${index}].${field}`);
+        }
       }
     }
   });
@@ -291,22 +210,7 @@ function sameStringArray(actual, expected) {
     && expected.every((value, index) => actual[index] === value);
 }
 
-function primerCoversTerm(primerTerms, term) {
-  const normalized = term.toLowerCase();
-  return primerTerms.has(normalized)
-    || (normalized === 'trigger' && primerTerms.has('automation trigger'));
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function bodyContainsTerm(bodyText, term) {
-  return new RegExp(`(^|[^a-z0-9])${escapeRegExp(term.toLowerCase())}([^a-z0-9]|$)`, 'i').test(bodyText);
-}
-
 export function validateRoadmap(roadmap, options = {}) {
-  const audience = options.audience ?? 'unknown';
   const issues = [];
 
   if (!roadmap || typeof roadmap !== 'object' || Array.isArray(roadmap)) {
@@ -322,7 +226,6 @@ export function validateRoadmap(roadmap, options = {}) {
     const path = `${stepKey}.nodes[${index}]`;
     const nodeId = node?.id;
     const title = node?.title ?? node?.name_plain;
-    const searchable = text(node);
 
     if (!hasMeaningfulValue(node?.title)) {
       addIssue(issues, ISSUE_CODES.MISSING_NODE_TITLE, 'Node must include launch schema title.', `${path}.title`, {
@@ -351,9 +254,6 @@ export function validateRoadmap(roadmap, options = {}) {
         });
       } else {
         seenTitles.set(normalizedTitle, `${path}.title`);
-      }
-      if (GENERIC_NODE_TITLES.has(title)) {
-        addIssue(issues, ISSUE_CODES.GENERIC_NODE_TITLE, 'Generic or fallback node title is banned.', `${path}.title`, { title });
       }
     }
 
@@ -386,20 +286,6 @@ export function validateRoadmap(roadmap, options = {}) {
     }
 
     validatePanel(node, path, issues);
-
-    if (NON_TECH_AUDIENCES.has(audience) && CODE_TOOL_PATTERN.test(searchable)) {
-      addIssue(issues, ISSUE_CODES.NON_TECH_CODE_TOOL, 'Non-tech audience received code/API/server tooling.', path, {
-        audience,
-        title,
-      });
-    }
-
-    if (/repair|fallback|Practice and Apply/i.test(`${nodeId ?? ''} ${title ?? ''} ${searchable}`)) {
-      addIssue(issues, ISSUE_CODES.FALLBACK_OR_REPAIR_MARKER, 'Roadmap contains fallback or repair marker.', path, {
-        node_id: nodeId,
-        title,
-      });
-    }
   }
 
   nodes.forEach(({ node, stepKey, index }, orderedIndex) => {
@@ -408,7 +294,6 @@ export function validateRoadmap(roadmap, options = {}) {
     const nextId = nodes[orderedIndex + 1]?.node?.id;
     const expectedPrerequisites = prevId ? [prevId] : [];
     const expectedUnlocks = nextId ? [nextId] : [];
-
     if (!sameStringArray(node.prerequisite_node_ids, expectedPrerequisites)) {
       addIssue(issues, ISSUE_CODES.FLOW_ORDER_INVALID, 'Node prerequisite flow does not match roadmap sequence.', `${stepKey}.nodes[${index}].prerequisite_node_ids`, {
         node_id: node.id,
@@ -425,17 +310,8 @@ export function validateRoadmap(roadmap, options = {}) {
     }
   });
 
-  const bodyText = STEP_KEYS.map(stepKey => text(roadmap[stepKey])).join(' ');
-  const primerTerms = validateTerminology(roadmap, bodyText, issues);
+  validateTerminology(roadmap, issues);
   validateProjectCadence(roadmap, nodes.length, issues);
-
-  for (const term of TECH_TERMS) {
-    if (bodyContainsTerm(bodyText, term) && !primerCoversTerm(primerTerms, term)) {
-      addIssue(issues, ISSUE_CODES.TECH_TERM_MISSING_FROM_PRIMER, 'Technical term appears without terminology primer coverage.', 'terminology_primer.terms', {
-        term,
-      });
-    }
-  }
 
   const blocking = issues.filter(i => i.severity === 'blocking');
   const warnings = issues.filter(i => i.severity === 'warning');

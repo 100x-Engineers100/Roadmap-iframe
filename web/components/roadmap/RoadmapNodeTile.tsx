@@ -109,7 +109,6 @@ export function RoadmapNodeTile({
       >
         <span className="roadmap-tile-copy">
           <strong>{item.node.name_plain}</strong>
-          <small>{item.node.one_line_desc}</small>
         </span>
         <span className={isProject ? 'roadmap-tile-date roadmap-tile-project-icon' : 'roadmap-tile-date'}>
           {isProject ? <Hammer size={17} strokeWidth={2.35} aria-hidden="true" /> : <strong>{item.stepNum}</strong>}

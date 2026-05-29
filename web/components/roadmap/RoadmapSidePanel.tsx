@@ -8,7 +8,6 @@ import { DEPTH_STYLE, type RoadmapNodeItem } from './roadmapUtils';
 
 interface RoadmapSidePanelProps {
   selected: RoadmapNodeItem | null;
-  total: number;
   isMobile: boolean;
   journeyAnalogy?: JourneyAnalogy;
   onClose: () => void;
@@ -83,7 +82,7 @@ function ProjectPanel({ item }: { item: RoadmapNodeItem }) {
   );
 }
 
-export function RoadmapSidePanel({ selected, total, isMobile, journeyAnalogy, onClose }: RoadmapSidePanelProps) {
+export function RoadmapSidePanel({ selected, isMobile, journeyAnalogy, onClose }: RoadmapSidePanelProps) {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -112,7 +111,7 @@ export function RoadmapSidePanel({ selected, total, isMobile, journeyAnalogy, on
             </button>
             {selected.node.node_kind === 'project'
               ? <ProjectPanel item={selected} />
-              : <NodePanel item={selected} total={total} journeyAnalogy={journeyAnalogy} />
+              : <NodePanel item={selected} journeyAnalogy={journeyAnalogy} />
             }
           </motion.aside>
         </>

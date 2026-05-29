@@ -4,13 +4,35 @@ import type { JourneyAnalogy } from '@/types';
 import { DEPTH_STYLE, type RoadmapNodeItem } from './roadmapUtils';
 import { NodeExpansionMap } from './NodeExpansionMap';
 
+function ExplanationText({ text }: { text: string }) {
+  if (!text?.includes('•')) return <p>{text}</p>;
+
+  const parts = text.split(/\s*•\s*/);
+  const opening = parts[0]?.trim();
+  const rest = parts.slice(1);
+  const twistIdx = rest.findIndex(p => /^the twist:/i.test(p.trim()));
+  const bullets = twistIdx >= 0 ? rest.slice(0, twistIdx) : rest;
+  const twist = twistIdx >= 0 ? rest[twistIdx]?.trim() : null;
+
+  return (
+    <div className="explanation-body">
+      {opening && <p className="explanation-opener">{opening}</p>}
+      {bullets.length > 0 && (
+        <ul className="explanation-bullets">
+          {bullets.map((b, i) => <li key={i}>{b.trim()}</li>)}
+        </ul>
+      )}
+      {twist && <p className="explanation-twist"><strong>The Twist:</strong> {twist.replace(/^the twist:\s*/i, '')}</p>}
+    </div>
+  );
+}
+
 interface NodePanelProps {
   item: RoadmapNodeItem;
-  total: number;
   journeyAnalogy?: JourneyAnalogy;
 }
 
-export function NodePanel({ item, total, journeyAnalogy }: NodePanelProps) {
+export function NodePanel({ item, journeyAnalogy }: NodePanelProps) {
   const depth = DEPTH_STYLE[item.node.depth];
   const leftAtoms = item.node.panel?.expansion?.left_items ?? [];
   const rightAtoms = item.node.panel?.expansion?.right_items ?? [];
@@ -19,7 +41,7 @@ export function NodePanel({ item, total, journeyAnalogy }: NodePanelProps) {
 
   return (
     <div className="panel-body">
-      <NodeExpansionMap item={item} total={total} />
+      <NodeExpansionMap item={item} />
 
       <section className="panel-section subtopic-details">
         <div className="section-title">Node atoms</div>
@@ -27,7 +49,7 @@ export function NodePanel({ item, total, journeyAnalogy }: NodePanelProps) {
           {atoms.map((atom) => (
             <article className="subtopic-detail-card" key={atom.id}>
               <h4>{atom.order}. {atom.label}</h4>
-              <p>{atom.explanation}</p>
+              <ExplanationText text={atom.explanation} />
               <p>{atom.learner_action}</p>
               <span>{atom.output}</span>
               <div className="subnode-meta">

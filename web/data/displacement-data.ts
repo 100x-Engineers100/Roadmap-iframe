@@ -122,6 +122,7 @@ export const ADOPTION_MULTIPLIER: Record<string, number> = {
 // Values: fraction of tasks in category automatable by GenAI (0–1)
 // Used in taskAdj = weightedAvg(exposure − 0.5) × 40, clamped to [−20, +20]
 export const TASK_CATEGORY_EXPOSURE: Record<string, number> = {
+  technical_coding:      0.78, // write/implement/deploy/debug — GitHub Copilot + Claude era
   routine_cognitive:     0.82,
   routine_communication: 0.78,
   analytical:            0.45,
@@ -134,13 +135,50 @@ export const TASK_CATEGORY_EXPOSURE: Record<string, number> = {
 
 // Keyword lists for categoriseTask(). Engineering implementation — NOT from any paper.
 // Operationalises Autor-Levy-Murnane (2003) task categories using O*NET language patterns.
+// IMPORTANT: technical_coding must come first — it catches software verbs before
+// analytical/physical_nonroutine claim them (first-match-wins, Object.entries order).
 export const TASK_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  technical_coding:      [
+    'write code','write software','write program','write script',
+    'code','program','implement','develop software','develop application',
+    'develop system','build software','build application','build system',
+    'deploy','configure software','configure system','debug','refactor',
+    'integrate api','integrate system','integrate software',
+    'modify software','modify code','modify existing','revise software',
+    'expand software','test software','test application','test code',
+    'execute code','run tests','automate','architect','engineer software',
+    'design software','design system','design architecture',
+  ],
   routine_cognitive:     ['enter','input','record','process','calculate','compile','sort','file','log','track','update','maintain records','data entry','tabulate'],
   routine_communication: ['prepare reports','write reports','respond to','answer calls','document','schedule','coordinate meetings','draft correspondence'],
   analytical:            ['analyse','analyze','evaluate','assess','research','investigate','identify trends','interpret','review data','diagnose'],
   strategic:             ['develop strategy','plan','forecast','recommend','advise','oversee','determine','allocate','prioritize'],
   creative:              ['design','create','develop concepts','write content','produce','conceptualise','ideate','brand','compose','invent','originate'],
   social:                ['negotiate','persuade','present to','collaborate','manage relationships','mentor','counsel','facilitate','advise clients','assist'],
-  physical_nonroutine:   ['inspect','install','repair','operate equipment','test hardware','measure','assemble','maintain machinery'],
+  // physical keywords require compound phrases to avoid false-positives on software tasks
+  // e.g. "repair" alone would misclassify "repair software bugs" as physical
+  physical_nonroutine:   ['operate equipment','repair equipment','repair machinery','repair hardware','install hardware','install equipment','test hardware','assemble','maintain machinery','inspect facility'],
   supervision:           ['supervise','manage team','lead','direct','train staff','delegate','coach','performance review'],
+};
+
+// ai_familiarity adjustment — applied after all 4 factors + pathway modulation
+// Total protection budget: familiarity owns −20, confirmed clusters own −10 (= −30 max)
+// Calibrated from WhatAboutAI measurement: devs without AI tools = 85%, with = 55% → ~30pt gap
+export const AI_FAMILIARITY_ADJUSTMENT: Record<string, number> = {
+  none:         8,   // no AI awareness = more exposed than neutral
+  basic:        0,   // neutral baseline
+  intermediate: -10, // actively building AI into workflow
+  advanced:    -20,  // building AI systems/agents — strong augmentation signal
+};
+
+// Pathway discount applied to ADOPTION_MULTIPLIER
+// Source: arXiv 2503.19159 "Augmenting or Automating Labor?" (2025)
+// Same field-level adoption rate produces OPPOSITE outcomes based on personal skill:
+//   automation  = you're behind the adopters → multiplier amplifies your risk (full 1.20)
+//   augmentation = you ARE the adopter → multiplier becomes protective (1.20 × 0.70 = 0.84)
+// 30% discount calibrated from WhatAboutAI: 85% → 55% = ~30pt absolute reduction for AI-skilled workers
+export const PATHWAY_DISCOUNT: Record<string, number> = {
+  automation:    0.00, // no AI skills → full multiplier applies
+  transitioning: 0.15, // learning → partial reduction (e.g. 1.20 × 0.85 = 1.02)
+  augmentation:  0.30, // you ARE the 40% → protective (e.g. 1.20 × 0.70 = 0.84)
 };

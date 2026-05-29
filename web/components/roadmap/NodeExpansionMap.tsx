@@ -20,13 +20,22 @@ function getPills(item: RoadmapNodeItem, side: 'left' | 'right'): string[] {
   return (source?.length ? source : fallback).filter(Boolean);
 }
 
-export function NodeExpansionMap({ item, total }: { item: RoadmapNodeItem; total: number }) {
+function BranchRows({ items, side }: { items: string[]; side: 'left' | 'right' }) {
+  return (
+    <div className={`node-map-branch node-map-branch-${side}`} aria-hidden="true">
+      {items.map((_, index) => (
+        <span className="node-map-branch-row" key={`${side}-branch-${index}`} />
+      ))}
+    </div>
+  );
+}
+
+export function NodeExpansionMap({ item }: { item: RoadmapNodeItem }) {
   const left = getPills(item, 'left');
   const right = getPills(item, 'right');
   const rowCount = Math.max(left.length, right.length, 1);
   const stackHeight = rowCount * 42 - 8;
   const mapStyle = { '--node-map-stack-height': `${stackHeight}px` } as CSSProperties;
-  const nodeLabel = `Node ${String(item.nodeNum).padStart(2, '0')}`;
 
   return (
     <section className="node-map" aria-label={`${item.node.name_plain} expanded subtopics`}>
@@ -36,8 +45,10 @@ export function NodeExpansionMap({ item, total }: { item: RoadmapNodeItem; total
       </div>
 
       <div className="node-map-grid" style={mapStyle}>
+        <span className="node-map-cluster-label node-map-cluster-label-left">Concepts</span>
+        <span className="node-map-cluster-label node-map-cluster-label-right">Applied</span>
+
         <div className="node-map-column node-map-column-left">
-          <span className="node-map-cluster-label">Concepts</span>
           <div className="node-map-pills node-map-pills-left">
             {left.map((pill, index) => (
               <span className="node-map-pill-slot" key={`left-${index}`}>
@@ -49,17 +60,18 @@ export function NodeExpansionMap({ item, total }: { item: RoadmapNodeItem; total
           </div>
         </div>
 
+        <BranchRows items={left} side="left" />
+
         <div className="node-map-center">
           <div className="node-map-line" aria-hidden="true" />
           <div className="node-map-badge">
-            <small>{nodeLabel}</small>
             <strong>{item.node.name_plain}</strong>
-            <span>{item.nodeNum} of {total}</span>
           </div>
         </div>
 
+        <BranchRows items={right} side="right" />
+
         <div className="node-map-column node-map-column-right">
-          <span className="node-map-cluster-label">Applied</span>
           <div className="node-map-pills node-map-pills-right">
             {right.map((pill, index) => (
               <span className="node-map-pill-slot" key={`right-${index}`}>

@@ -16,7 +16,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Write a detailed prompt (style, subject, mood, use case) and generate 4+ variants using Midjourney or FLUX.',
     applied_output: '4+ on-brand AI image variants ready for review.',
     primary_tool: 'Midjourney',
-    time_est: '45 min',
   },
   'S1.2': {
     concept_label: 'Visual Style Consistency',
@@ -25,7 +24,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Apply an IP Adapter or FLUX Redux to generate 4 variants maintaining consistent character or brand style.',
     applied_output: '4 visually consistent brand images from one style reference.',
     primary_tool: 'Midjourney',
-    time_est: '1 hr',
   },
   'S1.3': {
     concept_label: 'Brand LoRA Training',
@@ -34,7 +32,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Collect 15+ brand reference images, train a LoRA on JavasLabs or AI Toolkit, and generate 3 test outputs.',
     applied_output: 'A trained brand LoRA that produces on-brand image variants.',
     primary_tool: 'AI Toolkit',
-    time_est: '2-3 hrs',
   },
   'S1.4': {
     concept_label: 'AI Video Creation',
@@ -43,7 +40,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Use Kling or WAN to generate a 5-10 second video clip from one campaign image.',
     applied_output: 'A 5-10 second AI-generated video clip ready for review.',
     primary_tool: 'Kling',
-    time_est: '45 min',
   },
   'S1.5': {
     concept_label: 'AI Influencer Personas',
@@ -52,7 +48,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Create a 9-image reference set and use FreePik Spaces to generate 5 campaign images of your AI persona.',
     applied_output: '5 campaign images featuring a consistent AI persona.',
     primary_tool: 'FreePik Spaces',
-    time_est: '1-2 hrs',
   },
   'S1.6': {
     concept_label: 'AI Spokesperson Pipeline',
@@ -61,7 +56,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Write a 60-second product script and generate an AI spokesperson video using HeyGen.',
     applied_output: 'A 60-second AI spokesperson video ready for distribution.',
     primary_tool: 'HeyGen',
-    time_est: '1 hr',
   },
   'S1.7': {
     concept_label: 'AVTV Production Stack',
@@ -70,7 +64,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Run one piece of content through the full AVTV pipeline: script, spokesperson, voiceover, B-roll, edit, and music.',
     applied_output: 'One fully produced video asset built end-to-end via the AVTV pipeline.',
     primary_tool: 'HeyGen',
-    time_est: '2-3 hrs',
   },
   'S1.8': {
     concept_label: 'AI Short Film Workflow',
@@ -79,7 +72,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Follow the 6-phase process to produce a 30-second AI short film or ad for one campaign.',
     applied_output: 'A 30-second AI-produced film or ad asset.',
     primary_tool: 'FreePik Spaces',
-    time_est: '3-4 hrs',
   },
   'S2.1': {
     concept_label: 'Workflow Mapping (OPT)',
@@ -89,7 +81,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Draw your operating model. Identify 3 repeatable processes. Break each into discrete tasks and score each task for AI readiness (can AI do it? should it?).',
     applied_output: 'A prioritised task delegation map showing which tasks go to AI immediately vs later vs never.',
     primary_tool: 'Claude',
-    time_est: '45 min',
   },
   'S2.2': {
     concept_label: 'Prompt Engineering',
@@ -98,7 +89,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Write 3 reusable prompt templates for your top weekly tasks: one with a system prompt, one with few-shot examples, one with structured output format.',
     applied_output: '3 tested prompt templates you can reuse daily.',
     primary_tool: 'Claude',
-    time_est: '45 min',
   },
   'S2.3': {
     concept_label: 'LLM API Integration',
@@ -107,7 +97,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Build a FastAPI endpoint that calls Claude API with a role-specific system prompt and returns a structured JSON response.',
     applied_output: 'A working FastAPI + Claude API endpoint connected to one real use case.',
     primary_tool: 'FastAPI',
-    time_est: '1-2 hrs',
   },
   'S2.4': {
     concept_label: 'Document RAG (Naive)',
@@ -116,7 +105,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Chunk one internal document using a chunking strategy, embed it with Supabase pgvector, and test 5 questions against it.',
     applied_output: 'A working RAG system that answers questions from one internal document.',
     primary_tool: 'LlamaIndex',
-    time_est: '2-3 hrs',
   },
   'S2.5': {
     concept_label: 'Advanced RAG',
@@ -125,7 +113,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Add hybrid search (BM25 + vector) and a re-ranking step to your naive RAG. Compare answer quality on 10 test questions.',
     applied_output: 'An advanced RAG system with measurably better retrieval accuracy.',
     primary_tool: 'Pinecone',
-    time_est: '2-3 hrs',
   },
   'S2.6': {
     concept_label: 'AI Memory Systems',
@@ -134,7 +121,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Add a Redis-backed memory layer so your RAG system remembers the last 5 conversation turns and user preferences.',
     applied_output: 'A RAG system with persistent cross-session memory.',
     primary_tool: 'Redis',
-    time_est: '2-3 hrs',
   },
   'S2.7': {
     concept_label: 'MCP Protocol',
@@ -143,7 +129,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Build an MCP server that exposes one internal tool or data source to Claude via the MCP SDK.',
     applied_output: 'A working MCP server that Claude can query for real data.',
     primary_tool: 'Claude MCP',
-    time_est: '1-2 hrs',
   },
   'S2.8': {
     concept_label: 'AI Tool Calling',
@@ -152,7 +137,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Add 2 tool definitions to a Claude/OpenAI call: one that retrieves data and one that takes an action.',
     applied_output: 'An AI system that can perform real actions using defined tools.',
     primary_tool: 'OpenAI',
-    time_est: '1-2 hrs',
   },
   'S2.9': {
     concept_label: 'LoRA Fine-tuning',
@@ -161,7 +145,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Prepare 50+ examples of your target style, train a LoRA with Axolotl, and evaluate against the base model on 10 test prompts.',
     applied_output: 'A fine-tuned model that matches your organization\'s writing style on the target task.',
     primary_tool: 'Axolotl',
-    time_est: '3-4 hrs',
   },
   'S2.10': {
     concept_label: 'LLM Cost Optimization',
@@ -170,7 +153,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Profile your current LLM usage, implement model tiering for 2 use cases, and add Redis caching for repeated queries.',
     applied_output: 'A cost-optimized LLM system with measurable cost reduction and full observability.',
     primary_tool: 'LangSmith',
-    time_est: '2-3 hrs',
   },
   'S2.11': {
     concept_label: 'Ship Cycle',
@@ -179,7 +161,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Write a one-page PRD, generate the MVP in Lovable, refine with Cursor, and deploy using Claude Code.',
     applied_output: 'A deployed working product built entirely through the Ship Cycle.',
     primary_tool: 'Cursor',
-    time_est: '2-3 hrs',
   },
   'S3.1': {
     concept_label: 'ReAct Agent Loop',
@@ -188,7 +169,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Build a ReAct agent in n8n that completes a 3-step task: search for information, process it, and write an output.',
     applied_output: 'A working ReAct agent that completes a real multi-step task autonomously.',
     primary_tool: 'n8n',
-    time_est: '2-3 hrs',
   },
   'S3.2': {
     concept_label: 'No-Code Automation',
@@ -197,7 +177,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Build an n8n workflow that triggers from one event, processes data with an AI node, and sends an output to a tool you already use.',
     applied_output: 'A live n8n workflow that runs automatically on a trigger.',
     primary_tool: 'n8n',
-    time_est: '1-2 hrs',
   },
   'S3.3': {
     concept_label: 'Multi-Agent Orchestration',
@@ -206,7 +185,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Implement a Manager-Worker pattern where one agent plans and another executes a real multi-step task.',
     applied_output: 'A 2-agent system that completes one complex task through orchestration.',
     primary_tool: 'CrewAI',
-    time_est: '2-3 hrs',
   },
   'S3.4': {
     concept_label: 'Agentic Pipeline Design',
@@ -215,7 +193,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Map your most repetitive multi-step workflow and rebuild it as an agentic pipeline in n8n that runs end-to-end on a trigger.',
     applied_output: 'A live agentic pipeline that eliminates one manual repetitive workflow.',
     primary_tool: 'n8n',
-    time_est: '1-2 hrs',
   },
   'S3.5': {
     concept_label: 'Agent Safety Guardrails',
@@ -224,7 +201,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Add LlamaGuard intent classification to your agent before every tool call. Test with 10 edge-case inputs including injection attempts.',
     applied_output: 'An agent system with LlamaGuard safety checks on all tool calls.',
     primary_tool: 'LlamaGuard',
-    time_est: '1-2 hrs',
   },
   'S3.6': {
     concept_label: 'LLM Evaluation',
@@ -233,7 +209,6 @@ const SKILL_REGISTRY = {
     applied_exercise: 'Design a 5-criterion rubric, run 20 test cases through your LLM system, and set a quality threshold that triggers alerts.',
     applied_output: 'An automated evaluation loop with a quality threshold that catches regressions.',
     primary_tool: 'LangSmith',
-    time_est: '1-2 hrs',
   },
 };
 
@@ -245,7 +220,6 @@ function getSkillData(skillId) {
     applied_exercise: 'Complete a hands-on exercise applying this skill to one real task from your role.',
     applied_output: 'A completed exercise demonstrating this skill in a real work context.',
     primary_tool: 'Claude',
-    time_est: '45 min',
   };
 }
 
@@ -292,24 +266,31 @@ function buildConceptAtoms(gap, nodeId, aaa_phase, allowedTools) {
         ? `A clear mental model of what ${skill.concept_label} means for your work.`
         : 'A summary of how this capability applies to your role.',
       tools: [tool],
-      time_est: '20 min',
     });
   }
 
-  // Risk atom — always last on left side
+  // Pitfall atom — skill-specific, always last on left side
   const riskOrder = skillIds.length + 1;
+  const primarySkillId = skillIds[0];
+  const primarySkill = primarySkillId ? getSkillData(primarySkillId) : null;
+  const capabilityShortLower = gap.capability.split('(')[0].trim().toLowerCase();
   atoms.push({
     id: `${nodeId}-L${riskOrder}`,
     order: riskOrder,
-    label: 'Common Failure Modes',
+    label: primarySkill
+      ? `${primarySkill.concept_label}: The Non-Obvious Trap`
+      : `${gap.capability.split('(')[0].trim()}: What Goes Wrong`,
     type: 'risk',
     depth_level: 'scan',
-    depth_reason: 'Awareness: knowing the failure modes prevents the most common setbacks before they happen.',
-    explanation: `The most common mistake when starting with ${gap.capability.split('(')[0].trim().toLowerCase()} is picking tools before mapping the process. ${gap.why_selected ? gap.why_selected.split('.')[0] + '.' : ''}`,
-    learner_action: 'Review the three most common failure patterns for this capability and note which one you are most likely to hit first.',
-    output: 'A personal risk checklist for this node that you can reference when you hit a blocker.',
+    depth_reason: `Pitfall awareness: name the one failure pattern from ${primarySkill?.concept_label ?? gap.capability.split('(')[0].trim()} that engineers hit in week 1.`,
+    explanation: primarySkill
+      ? `The first-week failure with ${primarySkill.concept_label.toLowerCase()} is a subtle implementation detail that looks correct until it breaks in production. ${primarySkill.concept_explanation.split('.')[0]}.`
+      : `The most common mistake when starting with ${capabilityShortLower} is picking tools before mapping the process. ${gap.why_selected ? gap.why_selected.split('.')[0] + '.' : ''}`,
+    learner_action: primarySkill
+      ? `Before building, name the one failure mode from ${primarySkill.concept_label.toLowerCase()} most likely to hit your current setup — write it down before you write any code.`
+      : 'Review the three most common failure patterns for this capability and note which one you are most likely to hit first.',
+    output: 'A named pitfall on your implementation checklist — specific enough that you know exactly what to test against before shipping.',
     tools: [allowedTools[0] ?? 'Claude'],
-    time_est: '15 min',
   });
 
   return atoms;
@@ -352,7 +333,6 @@ function buildAppliedAtoms(gap, nodeId, aaa_phase, allowedTools) {
         ? skill.applied_output
         : 'A completed work output you can show as evidence of this skill.',
       tools: [tool],
-      time_est: skill ? skill.time_est : '45 min',
     });
   }
 
@@ -369,7 +349,6 @@ function buildAppliedAtoms(gap, nodeId, aaa_phase, allowedTools) {
     learner_action: 'Build the mastery artifact by combining all the skills from this node into one deliverable you can show to a peer.',
     output: `A completed ${gap.capability.split(' ').slice(0, 4).join(' ').toLowerCase()} artifact ready for portfolio or work use.`,
     tools: allowedTools.slice(0, 2),
-    time_est: '45 min',
   });
 
   return atoms;
@@ -398,7 +377,6 @@ function buildNodeCheckpoint(gap, nodeId) {
       `The artifact uses the actual tools listed in this node, not just a description of them.`,
     ],
     tools: gap.allowed_tools.slice(0, 3),
-    time_est: '1-2 hrs',
     confidence_check: `Can you explain to a peer what ${capabilityShort.toLowerCase()} means for your specific role and show them a real output?`,
   };
 }

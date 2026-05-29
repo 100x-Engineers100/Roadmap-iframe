@@ -58,14 +58,12 @@ function toRoadmapNode(node: RoadmapBlueprintNode): RoadmapNode {
       description: atom.explanation,
       outcome: atom.output,
       tools: atom.tools,
-      time_est: atom.time_est,
     })),
     concepts_left: node.panel.expansion.left_items.map(atom => atom.label),
     concepts_right: node.panel.expansion.right_items.map(atom => atom.label),
     analogy: {
       base: node.panel.analogy ? `${node.panel.analogy.lens_name}: ${mappings[0]?.analogy_part ?? node.title}` : node.title,
       role_skin: mappings[0]?.plain_meaning ?? node.one_line_desc,
-      bridge_line: node.panel.analogy?.takeaway ?? '',
     },
   };
 }
@@ -76,18 +74,22 @@ function checkpointForPhase(
   defaultTitle: string
 ): RoadmapStep['checkpoint'] {
   const phaseNodeIds = phaseNodes.map(node => node.id);
-  const project = projects.find(candidate =>
-    candidate.after_node_ids.length > 0
-    && candidate.after_node_ids.every(id => phaseNodeIds.includes(id))
-  ) ?? projects.find(candidate => candidate.type === 'final_project');
+  // Find the tightest project that covers ALL of this phase's nodes.
+  // "tightest" = smallest after_node_ids that still contains every phaseNodeId.
+  const project = projects
+    .filter(candidate =>
+      candidate.after_node_ids.length > 0
+      && phaseNodeIds.every(id => candidate.after_node_ids.includes(id))
+    )
+    .sort((a, b) => a.after_node_ids.length - b.after_node_ids.length)[0]
+    ?? projects.find(candidate => candidate.type === 'final_project');
 
   return {
     title: project?.title ?? defaultTitle,
-    goal: project?.goal ?? `Prove the capabilities in ${defaultTitle}.`,
-    concepts: project?.concepts_checked ?? phaseNodes.map(node => node.title),
-    problem_statement: project?.description ?? phaseNodes.map(node => node.one_line_desc).join(' '),
-    done_criteria: project?.done_when?.join(' ') ?? 'You can explain and demonstrate the phase output.',
-    time_est: project?.time_est ?? '2-3 hrs',
+    goal: project?.objective ?? `Complete the capabilities in ${defaultTitle}.`,
+    concepts: project?.concepts_covered ?? phaseNodes.map(node => node.title),
+    problem_statement: project?.scenario ?? phaseNodes.map(node => node.one_line_desc).join(' '),
+    done_criteria: project?.success_criteria?.join(' ') ?? 'You can explain and demonstrate the phase output.',
   };
 }
 

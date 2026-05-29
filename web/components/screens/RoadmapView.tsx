@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { BookOpen, ExternalLink, Download } from 'lucide-react';
+import { generateOfflineHTML } from '@/lib/export/generateOfflineHTML';
+import { ProjectSidePanel } from '@/components/roadmap/ProjectSidePanel';
 import { RoadmapCanvas } from '@/components/roadmap/RoadmapCanvas';
 import { RoadmapGlossaryPanel } from '@/components/roadmap/RoadmapGlossaryPanel';
 import { RoadmapSidePanel } from '@/components/roadmap/RoadmapSidePanel';
@@ -13,7 +15,7 @@ import {
   useIsMobile,
   type RoadmapNodeItem,
 } from '@/components/roadmap/roadmapUtils';
-import type { Roadmap, RoleCategory } from '@/types';
+import type { ProjectCheckpoint, Roadmap, RoleCategory } from '@/types';
 
 interface Props {
   roadmap: Roadmap;
@@ -23,22 +25,36 @@ interface Props {
 
 export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
   const [selected, setSelected] = useState<RoadmapNodeItem | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectCheckpoint | null>(null);
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const isMobile = useIsMobile();
   const roleName = ROLE_DISPLAY[roleCategory];
   const items = useMemo(() => getRoadmapItems(roadmap), [roadmap]);
   const glossaryTerms = useMemo(() => getGlossaryTerms(roadmap, items), [roadmap, items]);
+  const projectIconIndices = useMemo(() => {
+    const n = items.length;
+    if (n < 3) return [];
+
+    const indices = [1]; // first build waypoint sits after node 2
+    if (n >= 7) {
+      indices.push(4); // second waypoint after 3 more nodes
+    } else if (n >= 5) {
+      indices.push(3); // compact maps: second waypoint after 2 more nodes
+    }
+
+    return indices;
+  }, [items.length]);
 
   const handleDownload = useCallback(() => {
-    const json = JSON.stringify(roadmap, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+    const html = generateOfflineHTML(roadmap, roleCategory, socTitle);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `roadmap-${roleCategory}-${Date.now()}.json`;
+    a.download = `roadmap-${roleCategory}-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [roleCategory, roadmap]);
+  }, [roleCategory, roadmap, socTitle]);
 
   return (
     <div className={`${roadmapStyles.scope} roadmap-page`}>
@@ -91,6 +107,7 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
           selectedId={selected?.node.id ?? null}
           isMobile={isMobile}
           onSelect={setSelected}
+          projectIconIndices={projectIconIndices}
         />
 
         {roadmap.project_checkpoints?.length ? (
@@ -101,16 +118,18 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
             </div>
             <div className="checkpoint-strip-grid">
               {roadmap.project_checkpoints.filter(c => c.type === 'mini_project').map((checkpoint, i) => (
-                <article key={checkpoint.id} className="checkpoint-card checkpoint-card-mini">
+                <article
+                  key={checkpoint.id}
+                  className="checkpoint-card checkpoint-card-mini"
+                  data-clickable=""
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { setSelected(null); setSelectedProject(checkpoint); }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelected(null); setSelectedProject(checkpoint); } }}
+                >
                   <div className="checkpoint-card-tag">Mini Build {i + 1}</div>
                   <h3 className="checkpoint-card-title">{checkpoint.title}</h3>
-                  <p className="checkpoint-card-goal">{checkpoint.goal}</p>
-                  {checkpoint.artifact_to_build && (
-                    <div className="checkpoint-card-artifact">
-                      <span>Artifact</span>
-                      <strong>{checkpoint.artifact_to_build}</strong>
-                    </div>
-                  )}
+                  <p className="checkpoint-card-goal">{checkpoint.objective}</p>
                   {checkpoint.tools?.length > 0 && (
                     <div className="checkpoint-card-tools">
                       {checkpoint.tools.map(t => <span key={t} className="tool-pill">{t}</span>)}
@@ -120,18 +139,26 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
               ))}
             </div>
             {roadmap.project_checkpoints.filter(c => c.type === 'final_project').map(checkpoint => (
-              <article key={checkpoint.id} className="checkpoint-card checkpoint-card-capstone">
+              <article
+                key={checkpoint.id}
+                className="checkpoint-card checkpoint-card-capstone"
+                data-clickable=""
+                role="button"
+                tabIndex={0}
+                onClick={() => { setSelected(null); setSelectedProject(checkpoint); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setSelected(null); setSelectedProject(checkpoint); } }}
+              >
                 <div className="checkpoint-capstone-header">
                   <div className="checkpoint-card-tag checkpoint-card-tag-capstone">Capstone</div>
                   <h3 className="checkpoint-card-title">{checkpoint.title}</h3>
-                  <p className="checkpoint-card-goal">{checkpoint.goal}</p>
+                  <p className="checkpoint-card-goal">{checkpoint.objective}</p>
                 </div>
                 <div className="checkpoint-capstone-body">
-                  {checkpoint.done_when?.length > 0 && (
+                  {checkpoint.success_criteria?.length > 0 && (
                     <div className="checkpoint-capstone-criteria">
                       <span>Done when</span>
                       <ul>
-                        {checkpoint.done_when.map((item, i) => <li key={i}>{item}</li>)}
+                        {checkpoint.success_criteria.map((item, i) => <li key={i}>{item}</li>)}
                       </ul>
                     </div>
                   )}
@@ -149,10 +176,13 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
 
       <RoadmapSidePanel
         selected={selected}
-        total={items.length}
         isMobile={isMobile}
         journeyAnalogy={roadmap.journey_analogy}
         onClose={() => setSelected(null)}
+      />
+      <ProjectSidePanel
+        project={selectedProject}
+        onClose={() => setSelectedProject(null)}
       />
       <RoadmapGlossaryPanel
         terms={glossaryTerms}

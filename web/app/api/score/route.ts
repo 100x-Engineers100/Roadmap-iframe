@@ -47,7 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const validConfirmedIds = confirmed_cluster_ids.filter(id => VALID_CLUSTER_IDS.has(id));
 
   try {
-    const scoreResult = calculateScore(tasks, task_weights, soc_code, role_category, sector);
+    const scoreResult = calculateScore(tasks, task_weights, soc_code, role_category, sector, ai_familiarity, validConfirmedIds.length);
     const skillGap = inferSkillGap(role_category, validConfirmedIds, task_weights, tasks);
 
     return NextResponse.json({

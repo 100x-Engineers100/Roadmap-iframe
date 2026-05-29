@@ -91,7 +91,7 @@ export function EmailGate({
     } catch (err) {
       if (err instanceof Error && (err.name === 'RoadmapGenerationFailed' || err.message === 'generation_failed')) {
         setStatus('generation_failed');
-        setErrorMsg('Roadmap generation failed validation. Retry now and we will rebuild it from the locked blueprint.');
+        setErrorMsg('We encountered some issue with current processing. Please try again.');
         return;
       }
       setStatus('error');

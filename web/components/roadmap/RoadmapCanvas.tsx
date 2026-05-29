@@ -1,6 +1,6 @@
 'use client';
 
-import { PartyPopper } from 'lucide-react';
+import { Hammer, PartyPopper } from 'lucide-react';
 import { RoadmapNodeTile } from './RoadmapNodeTile';
 import {
   buildPath,
@@ -17,9 +17,10 @@ interface RoadmapCanvasProps {
   selectedId: string | null;
   isMobile: boolean;
   onSelect: (item: RoadmapNodeItem) => void;
+  projectIconIndices?: number[];
 }
 
-export function RoadmapCanvas({ items, selectedId, isMobile, onSelect }: RoadmapCanvasProps) {
+export function RoadmapCanvas({ items, selectedId, isMobile, onSelect, projectIconIndices = [] }: RoadmapCanvasProps) {
   const desktopLayout = getDesktopLayout(items.length);
   const points = isMobile ? getMobilePoints(items.length) : desktopLayout.points;
   const path = isMobile ? buildPath(points) : buildRoundedOrthogonalPath(desktopLayout.route);
@@ -29,19 +30,17 @@ export function RoadmapCanvas({ items, selectedId, isMobile, onSelect }: Roadmap
         const finalPoint = points[finalIndex];
         if (!finalPoint) return null;
 
-        const maxTileBottom = points.reduce((maxY, point, index) => {
-          const tile = getTilePlacement(index, point, false);
-          return Math.max(maxY, tile.top + 80);
-        }, 0);
-
         const finalTile = getTilePlacement(finalIndex, finalPoint, false);
+        const tileCenterX = finalTile.left + 107;
+        const tileBottom = finalTile.top + 84;
+
         return {
-          x: finalTile.left + 107,
-          y: maxTileBottom + 48,
+          x: Math.max(112, Math.min(tileCenterX, 968)),
+          y: tileBottom + 62,
         };
       })()
     : null;
-  const canvasHeight = Math.max(getCanvasHeight(points), finishStamp ? finishStamp.y + 60 : 0);
+  const canvasHeight = Math.max(getCanvasHeight(points), finishStamp ? finishStamp.y + 70 : 0);
 
   return (
     <div className="roadmap-canvas" style={{ height: canvasHeight }}>
@@ -63,6 +62,24 @@ export function RoadmapCanvas({ items, selectedId, isMobile, onSelect }: Roadmap
         />
       ))}
 
+      {!isMobile && projectIconIndices.map(idx => {
+        const p1 = points[idx];
+        const p2 = points[idx + 1];
+        if (!p1 || !p2) return null;
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+        return (
+          <div
+            key={idx}
+            className="project-spine-icon"
+            style={{ left: mx, top: my }}
+            aria-hidden="true"
+          >
+            <Hammer size={14} strokeWidth={2.2} />
+          </div>
+        );
+      })}
+
       {finishStamp && (
         <div
           className="roadmap-finish-stamp"
@@ -75,7 +92,7 @@ export function RoadmapCanvas({ items, selectedId, isMobile, onSelect }: Roadmap
             <span />
           </span>
           <span className="roadmap-finish-medal" aria-hidden="true">
-            <PartyPopper size={21} strokeWidth={2.4} />
+            <PartyPopper size={16} strokeWidth={2.4} />
           </span>
           <span className="roadmap-finish-copy">
             <strong>You are now <em>100x</em> better.</strong>

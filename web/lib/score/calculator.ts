@@ -1,4 +1,4 @@
-import type { OnetTask, ScoreBand, RoleCategory, TaskWeight } from '@/types';
+import type { AiFamiliarity, OnetTask, ScoreBand, RoleCategory, TaskWeight } from '@/types';
 import {
   LLM_EXPOSURE_BY_SOC,
   FO_FALLBACK_BY_ROLE,
@@ -7,7 +7,9 @@ import {
   ADOPTION_MULTIPLIER,
   TASK_CATEGORY_EXPOSURE,
   TASK_CATEGORY_KEYWORDS,
-} from '@/data/fo-scores';
+  AI_FAMILIARITY_ADJUSTMENT,
+  PATHWAY_DISCOUNT,
+} from '@/data/displacement-data';
 import { applyIndiaCalibration } from './india-calibration';
 
 export const SCORE_BANDS = {
@@ -46,15 +48,29 @@ export type BaseScoreSource =
   | 'llm_exposure'  // dv_beta from Eloundou et al. 2023 — primary source
   | 'role_fallback'; // DERIVED role-category proxy — used when SOC absent from LLM dataset
 
+export type Pathway = 'augmentation' | 'transitioning' | 'automation';
+
+// arXiv 2503.19159: high exposure + high skill = augmentation, not displacement
+function getPathway(familiarity: AiFamiliarity, clusterCount: number): Pathway {
+  if (familiarity === 'advanced' || (familiarity === 'intermediate' && clusterCount >= 3))
+    return 'augmentation';
+  if (familiarity === 'none' && clusterCount === 0)
+    return 'automation';
+  return 'transitioning';
+}
+
 export interface ScoreResult {
   score: number;
   band: ScoreBand;
   adjusted: boolean;      // true if India calibration was applied
   fallbackUsed: boolean;  // true if role_fallback was used (no per-SOC data)
   baseSource: BaseScoreSource;
-  baseScore: number;      // raw dv_beta × 100 before 4-factor adjustments
-  priorScore: number;     // after human necessity + elasticity + adoption (pre-task)
-  taskAdjustment: number; // how much tasks shifted priorScore (±20 max)
+  baseScore: number;                  // raw dv_beta × 100 before 4-factor adjustments
+  priorScore: number;                 // after necessity + elasticity + pathway-modulated adoption
+  taskAdjustment: number;             // tasks shifted score (±20 max)
+  pathway: Pathway;                   // augmentation | transitioning | automation
+  familiarityAdjustment: number;      // AI familiarity delta
+  confirmedClustersAdjustment: number; // −2 per confirmed cluster, max −10
 }
 
 export function calculateScore(
@@ -62,7 +78,9 @@ export function calculateScore(
   weights: Record<string, TaskWeight>,
   socCode: string,
   roleCategory: RoleCategory,
-  sector?: string
+  sector?: string,
+  aiFamiliarity: AiFamiliarity = 'none',
+  confirmedClusterCount: number = 0
 ): ScoreResult {
   // Strip minor suffix from SOC code: '15-1252.00' → '15-1252'
   const normalizedSOC = socCode.replace(/\.\d+$/, '');
@@ -90,14 +108,20 @@ export function calculateScore(
 
   // ─────────────────────────────────────────────────────────────────────────
   // FACTORS 2 + 3 + 4 — Prior score (human necessity + elasticity + adoption)
-  // Formula: priorScore = (base − necessity + elasticity) × adoptionMultiplier
-  // Source: MASTER_SPEC §4-Factor Composite Score Model (2026-05-22)
+  // Formula: priorScore = (base − necessity + elasticity) × effectiveMultiplier
+  // effectiveMultiplier = baseMultiplier × (1 − pathwayDiscount)
+  //   automation:    no discount — full multiplier (you're behind the adopters)
+  //   augmentation:  30% discount — multiplier can go below 1.0 (you ARE the adopter)
+  // Source: arXiv 2503.19159 "Augmenting or Automating Labor?" (2025)
   // ─────────────────────────────────────────────────────────────────────────
   const necessity = HUMAN_NECESSITY_DISCOUNT[roleCategory] ?? 0;
   const elasticity = DEMAND_ELASTICITY_ADJUSTMENT[roleCategory] ?? 0;
-  const multiplier = ADOPTION_MULTIPLIER[roleCategory] ?? 1.0;
+  const baseMultiplier = ADOPTION_MULTIPLIER[roleCategory] ?? 1.0;
 
-  const priorScore = (baseScore - necessity + elasticity) * multiplier;
+  const pathway = getPathway(aiFamiliarity, confirmedClusterCount);
+  const effectiveMultiplier = baseMultiplier * (1 - (PATHWAY_DISCOUNT[pathway] ?? 0));
+
+  const priorScore = (baseScore - necessity + elasticity) * effectiveMultiplier;
 
   // ─────────────────────────────────────────────────────────────────────────
   // TASK ADJUSTMENT — ±20pts max
@@ -131,16 +155,28 @@ export function calculateScore(
   // INDIA CALIBRATION — sector-specific delta (DERIVED, clearly labelled)
   // Source: WEF/NASSCOM/McKinsey India reports
   // ─────────────────────────────────────────────────────────────────────────
-  const { score, adjusted } = applyIndiaCalibration(postTaskScore, sector ?? null);
+  const { score: indiaScore, adjusted } = applyIndiaCalibration(postTaskScore, sector ?? null);
+
+  const familiarityAdjustment = AI_FAMILIARITY_ADJUSTMENT[aiFamiliarity] ?? 0;
+  // −2pts per confirmed cluster, max −10 (WhatAboutAI: 30pt gap split across familiarity+clusters)
+  const confirmedClustersAdjustment = Math.max(-10, confirmedClusterCount * -2);
+  const rawSkillAdj = familiarityAdjustment + confirmedClustersAdjustment;
+  // Cap: negative skill adjustments cannot reduce score by more than 35% of post-India value.
+  // Prevents low-base roles (marketer ~35) from being pushed to floor by flat −30 budget.
+  const cappedSkillAdj = rawSkillAdj < 0 ? Math.max(rawSkillAdj, -0.35 * indiaScore) : rawSkillAdj;
+  const finalScore = Math.min(100, Math.max(0, indiaScore + cappedSkillAdj));
 
   return {
-    score: Math.round(score),
-    band: getScoreBand(Math.round(score)),
+    score: Math.round(finalScore),
+    band: getScoreBand(Math.round(finalScore)),
     adjusted,
     fallbackUsed,
     baseSource,
     baseScore: Math.round(baseScore),
     priorScore: Math.round(priorScore),
     taskAdjustment: Math.round(taskAdjustment),
+    pathway,
+    familiarityAdjustment,
+    confirmedClustersAdjustment,
   };
 }
