@@ -25,7 +25,7 @@ export async function GET(
     return notFound();
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://100x-roadmap.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://100x-risk-calculator.vercel.app';
 
   const html = generateOfflineHTML(
     lead.roadmap,

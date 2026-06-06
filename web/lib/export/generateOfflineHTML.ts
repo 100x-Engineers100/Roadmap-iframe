@@ -823,7 +823,7 @@ export function generateOfflineHTML(
   socTitle: string,
   options: OfflineHTMLOptions = {}
 ): string {
-  const { shareToken, baseUrl = 'https://100x-roadmap.vercel.app' } = options;
+  const { shareToken, baseUrl = 'https://100x-risk-calculator.vercel.app' } = options;
   const items = getRoadmapItems(roadmap);
   const glossaryTerms = getGlossaryTerms(roadmap, items);
   const roleName = ROLE_DISPLAY[roleCategory];

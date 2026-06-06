@@ -47,7 +47,7 @@ export function RoadmapView({ roadmap, roleCategory, socTitle, shareToken }: Pro
   }, [items.length]);
 
   const handleCopyLink = useCallback(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://100x-roadmap.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://100x-risk-calculator.vercel.app';
     const shareUrl = `${baseUrl}/r/${shareToken}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
