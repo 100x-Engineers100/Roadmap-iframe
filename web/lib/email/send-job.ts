@@ -1,9 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { getResend, FROM } from './resend-client';
 import { buildImmediateEmailHTML, buildFollowupEmailHTML } from './templates';
-import { generateOfflineHTML } from '@/lib/export/generateOfflineHTML';
 import { ROLE_DISPLAY } from '@/lib/roadmap/layoutHelpers';
-import type { Roadmap, RoleCategory } from '@/types';
+import type { RoleCategory } from '@/types';
 
 interface EmailJob {
   id: string;
@@ -13,22 +12,19 @@ interface EmailJob {
 
 export async function sendEmailJob(
   job: EmailJob,
-  roadmap: Roadmap,
   roleCategory: RoleCategory,
-  socTitle: string
+  shareToken: string
 ): Promise<void> {
   const roleName = ROLE_DISPLAY[roleCategory];
-  const attachmentFilename = `100x-ai-roadmap-${roleCategory}.html`;
-
-  const htmlAttachment = generateOfflineHTML(roadmap, roleCategory, socTitle);
-  const attachmentBase64 = Buffer.from(htmlAttachment, 'utf8').toString('base64');
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://100x-roadmap.vercel.app';
+  const shareUrl = shareToken ? `${baseUrl}/r/${shareToken}` : baseUrl;
 
   const emailBody = job.sequence_step === 0
-    ? buildImmediateEmailHTML(roleName)
+    ? buildImmediateEmailHTML(roleName, shareUrl)
     : buildFollowupEmailHTML(roleName, job.sequence_step);
 
   const subject = job.sequence_step === 0
-    ? 'Your 100x AI roadmap is inside'
+    ? 'Your 100x AI roadmap is ready'
     : 'Your 100x AI roadmap — checking in';
 
   const { data, error } = await getResend().emails.send({
@@ -36,12 +32,6 @@ export async function sendEmailJob(
     to: job.email,
     subject,
     html: emailBody,
-    attachments: [
-      {
-        filename: attachmentFilename,
-        content: attachmentBase64,
-      },
-    ],
   });
 
   if (error || !data?.id) {

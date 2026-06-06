@@ -689,6 +689,120 @@ function getOfflineJs(
     if (e.key === 'Escape') { window.closePanel(); window.closeGlossary(); }
   });
 
+  var MOBILE_LAYOUT_QUERY = '(max-width: 767px), (max-height: 500px) and (pointer: coarse)';
+  var mobileMedia = window.matchMedia(MOBILE_LAYOUT_QUERY);
+  var desktopStyles = [];
+  var resizeTimer = null;
+
+  function rememberDesktopStyle(element) {
+    if (!element || element.hasAttribute('data-offline-desktop-style')) return;
+    element.setAttribute('data-offline-desktop-style', element.getAttribute('style') || '');
+    desktopStyles.push(element);
+  }
+
+  function restoreDesktopLayout() {
+    desktopStyles.forEach(function (element) {
+      var originalStyle = element.getAttribute('data-offline-desktop-style') || '';
+      if (originalStyle) element.setAttribute('style', originalStyle);
+      else element.removeAttribute('style');
+      element.removeAttribute('data-offline-desktop-style');
+    });
+    desktopStyles = [];
+
+    var canvas = document.querySelector('.roadmap-canvas');
+    if (canvas) canvas.classList.remove('roadmap-canvas-mobile-ready');
+  }
+
+  function layoutMobile() {
+    var canvas = document.querySelector('.roadmap-canvas');
+    if (!canvas) return;
+
+    var nodes = Array.prototype.slice.call(canvas.querySelectorAll('.roadmap-node'));
+    if (!nodes.length) return;
+
+    rememberDesktopStyle(canvas);
+    var cursorY = 20;
+    var nodeGap = 22;
+    var canvasWidth = canvas.getBoundingClientRect().width || window.innerWidth;
+    var nodeWidth = Math.min(Math.max(canvasWidth - 64, 248), 460);
+    var nodeLeft = Math.max((canvasWidth - nodeWidth) / 2, 28);
+
+    canvas.style.height = 'auto';
+    canvas.style.position = 'relative';
+
+    nodes.forEach(function (node) {
+      var dot = node.querySelector('.roadmap-dot');
+      var tile = node.querySelector('.roadmap-tile');
+      var leader = node.querySelector('.roadmap-leader');
+
+      rememberDesktopStyle(node);
+      rememberDesktopStyle(dot);
+      rememberDesktopStyle(tile);
+      rememberDesktopStyle(leader);
+
+      node.style.position = 'absolute';
+      node.style.left = nodeLeft + 'px';
+      node.style.top = cursorY + 'px';
+      node.style.width = nodeWidth + 'px';
+      node.style.height = 'auto';
+      node.style.display = 'flex';
+
+      if (leader) leader.style.display = 'none';
+
+      if (dot) {
+        dot.style.position = 'relative';
+        dot.style.left = 'auto';
+        dot.style.top = 'auto';
+      }
+
+      if (tile) {
+        tile.style.position = 'relative';
+        tile.style.left = 'auto';
+        tile.style.top = 'auto';
+        tile.style.width = '100%';
+      }
+
+      var nodeHeight = Math.ceil(node.getBoundingClientRect().height);
+      cursorY += nodeHeight + nodeGap;
+    });
+
+    var stamp = canvas.querySelector('.roadmap-finish-stamp');
+    if (stamp) {
+      rememberDesktopStyle(stamp);
+      stamp.style.position = 'absolute';
+      stamp.style.left = '50%';
+      stamp.style.top = (cursorY + 8) + 'px';
+      stamp.style.transform = 'translateX(-50%)';
+      cursorY += Math.ceil(stamp.getBoundingClientRect().height) + 74;
+    } else {
+      cursorY += 32;
+    }
+
+    canvas.style.height = cursorY + 'px';
+    canvas.classList.add('roadmap-canvas-mobile-ready');
+  }
+
+  function applyResponsiveLayout() {
+    if (mobileMedia.matches) {
+      layoutMobile();
+      window.requestAnimationFrame(layoutMobile);
+    } else {
+      restoreDesktopLayout();
+    }
+  }
+
+  function scheduleResponsiveLayout() {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(applyResponsiveLayout, 120);
+  }
+
+  applyResponsiveLayout();
+  window.addEventListener('load', applyResponsiveLayout);
+  window.addEventListener('resize', scheduleResponsiveLayout);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(applyResponsiveLayout);
+  }
+
   // Inject pre-rendered glossary content
   var gb = document.getElementById('offline-glossary-body');
   if (gb) gb.innerHTML = ${JSON.stringify(glossaryHtml)};
@@ -698,11 +812,18 @@ function getOfflineJs(
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+interface OfflineHTMLOptions {
+  shareToken?: string;
+  baseUrl?: string;
+}
+
 export function generateOfflineHTML(
   roadmap: Roadmap,
   roleCategory: RoleCategory,
-  socTitle: string
+  socTitle: string,
+  options: OfflineHTMLOptions = {}
 ): string {
+  const { shareToken, baseUrl = 'https://100x-roadmap.vercel.app' } = options;
   const items = getRoadmapItems(roadmap);
   const glossaryTerms = getGlossaryTerms(roadmap, items);
   const roleName = ROLE_DISPLAY[roleCategory];
@@ -738,12 +859,19 @@ export function generateOfflineHTML(
 
   const title = `AI-Native ${roleName} Roadmap`;
 
+  const ogTags = shareToken ? `
+  <meta property="og:title" content="My AI Roadmap for ${escapeHtml(socTitle)}">
+  <meta property="og:description" content="100x Engineers personalised AI transition roadmap">
+  <meta property="og:url" content="${escapeHtml(baseUrl)}/r/${escapeHtml(shareToken)}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">` : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(title)}</title>${ogTags}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">

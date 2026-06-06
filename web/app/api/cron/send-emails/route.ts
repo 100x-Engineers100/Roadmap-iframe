@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendEmailJob } from '@/lib/email/send-job';
-import type { Roadmap, RoleCategory } from '@/types';
+import type { RoleCategory } from '@/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,9 +13,9 @@ interface ClaimedJob {
 }
 
 interface LeadRow {
-  roadmap: Roadmap | null;
   role_category: RoleCategory;
-  soc_title: string;
+  share_token: string | null;
+  roadmap: unknown;
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     claimed.map(async (job) => {
       const { data: leadRows, error: leadError } = await supabaseAdmin
         .from('leads')
-        .select('roadmap, role_category, soc_title')
+        .select('role_category, share_token, roadmap')
         .eq('id', job.lead_id)
         .single();
 
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }
 
       try {
-        await sendEmailJob(job, lead.roadmap, lead.role_category, lead.soc_title);
+        await sendEmailJob(job, lead.role_category, lead.share_token ?? '');
         succeeded += 1;
       } catch (err) {
         console.error(`sendEmailJob failed for job ${job.id}:`, err instanceof Error ? err.message : err);

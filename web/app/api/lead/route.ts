@@ -47,6 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Capture lead before roadmap gen so data is never lost on failure
   let leadId: string | null = null;
+  let shareToken: string | null = null;
   try {
     const lead = await insertLead({
       name,
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       email_seq_completed_at: null,
     });
     leadId = lead.id;
+    shareToken = lead.share_token;
   } catch (err) {
     console.error('insertLead failed:', err instanceof Error ? err.message : err);
   }
@@ -102,7 +104,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Schedule 3-step sequence, then fire immediate email as fire-and-forget
     try {
       const step0Job = await scheduleEmailSequence(leadId, email, new Date());
-      sendEmailJob(step0Job, roadmap, role_category, soc_title).catch((err: unknown) => {
+      sendEmailJob(step0Job, role_category, shareToken ?? '').catch((err: unknown) => {
         console.error('immediate email send failed:', err instanceof Error ? err.message : err);
       });
     } catch (err) {
@@ -127,5 +129,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  return NextResponse.json({ roadmap });
+  return NextResponse.json({ roadmap, shareToken });
 }

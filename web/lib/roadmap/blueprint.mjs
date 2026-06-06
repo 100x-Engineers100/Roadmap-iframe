@@ -295,14 +295,25 @@ export function buildRoadmapBlueprint(userProfile, gapInferenceResult) {
     (grouped[key] ?? grouped.accelerated).push(node);
   }
 
-  const phases = phaseOrder
-    .filter(p => grouped[p].length > 0)
-    .map((p, i) => ({
-      id: `phase-${i + 1}-${role_category}`,
-      label: AAA_PHASE_LABELS[p],
-      theme: p.charAt(0).toUpperCase() + p.slice(1),
-      nodes: grouped[p],
-    }));
+  // Guarantee ≥1 node per phase — gap inference LLM sometimes assigns all nodes
+  // to only 2 phases, causing blueprintToRoadmap to throw "expected 3 phases".
+  for (let i = 1; i < phaseOrder.length; i++) {
+    if (grouped[phaseOrder[i]].length === 0) {
+      for (let j = i - 1; j >= 0; j--) {
+        if (grouped[phaseOrder[j]].length > 1) {
+          grouped[phaseOrder[i]].unshift(grouped[phaseOrder[j]].pop());
+          break;
+        }
+      }
+    }
+  }
+
+  const phases = phaseOrder.map((p, i) => ({
+    id: `phase-${i + 1}-${role_category}`,
+    label: AAA_PHASE_LABELS[p],
+    theme: p.charAt(0).toUpperCase() + p.slice(1),
+    nodes: grouped[p],
+  }));
 
   return {
     user_profile: userProfile,

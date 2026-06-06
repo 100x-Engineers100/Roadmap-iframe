@@ -43,6 +43,7 @@ interface AssessState {
   fallbackUsed: boolean;
   gapInferenceResult: GapInferenceResult | null;
   roadmap: Roadmap | null;
+  shareToken: string | null;
 }
 
 type Action =
@@ -52,7 +53,7 @@ type Action =
   | { type: 'SET_GAP_INFERENCE_RESULT'; result: GapInferenceResult }
   | { type: 'ADVANCE_TO_GAP' }
   | { type: 'ADVANCE_TO_EMAIL' }
-  | { type: 'SET_ROADMAP'; roadmap: Roadmap }
+  | { type: 'SET_ROADMAP'; roadmap: Roadmap; shareToken: string | null }
   | { type: 'GO_BACK' };
 
 const initialState: AssessState = {
@@ -72,6 +73,7 @@ const initialState: AssessState = {
   fallbackUsed: false,
   gapInferenceResult: null,
   roadmap: null,
+  shareToken: null,
 };
 
 function reducer(state: AssessState, action: Action): AssessState {
@@ -115,7 +117,7 @@ function reducer(state: AssessState, action: Action): AssessState {
     case 'ADVANCE_TO_EMAIL':
       return { ...state, step: 7 };
     case 'SET_ROADMAP':
-      return { ...state, step: 8, roadmap: action.roadmap };
+      return { ...state, step: 8, roadmap: action.roadmap, shareToken: action.shareToken };
     case 'GO_BACK':
       if (state.step === 3) return { ...state, step: 2 };
       return state;
@@ -225,6 +227,7 @@ export default function AssessPage() {
         roadmap={state.roadmap}
         roleCategory={state.roleCategory}
         socTitle={state.socMatch.title}
+        shareToken={state.shareToken}
       />
     );
   }
@@ -343,7 +346,7 @@ export default function AssessPage() {
               aiFamiliarity={state.aiFamiliarity}
               userProfile={state.userProfile}
               gapInferenceResult={state.gapInferenceResult}
-              onRoadmapReady={(roadmap) => dispatch({ type: 'SET_ROADMAP', roadmap })}
+              onRoadmapReady={(roadmap, shareToken) => dispatch({ type: 'SET_ROADMAP', roadmap, shareToken })}
             />
           </motion.div>
         )}

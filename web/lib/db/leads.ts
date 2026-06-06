@@ -1,12 +1,18 @@
+import { randomBytes } from 'crypto';
 import { supabaseAdmin } from '../supabase';
 import type { Lead, Roadmap } from '../../types';
 
+function generateShareToken(): string {
+  return randomBytes(16).toString('base64url').slice(0, 21);
+}
+
 export async function insertLead(
-  lead: Omit<Lead, 'id' | 'created_at'>
+  lead: Omit<Lead, 'id' | 'created_at' | 'share_token'>
 ): Promise<Lead> {
+  const share_token = generateShareToken();
   const { data, error } = await supabaseAdmin
     .from('leads')
-    .insert(lead)
+    .insert({ ...lead, share_token })
     .select()
     .single();
 

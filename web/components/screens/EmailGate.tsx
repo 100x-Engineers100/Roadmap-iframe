@@ -17,7 +17,7 @@ interface EmailGateProps {
   aiFamiliarity: AiFamiliarity;
   userProfile: UserWorkProfile | null;
   gapInferenceResult?: GapInferenceResult | null;
-  onRoadmapReady: (roadmap: Roadmap) => void;
+  onRoadmapReady: (roadmap: Roadmap, shareToken: string | null) => void;
 }
 
 const ROLE_DISPLAY: Record<RoleCategory, string> = {
@@ -85,9 +85,9 @@ export function EmailGate({
         throw new Error(data.error ?? `HTTP ${res.status}`);
       }
 
-      const data = (await res.json()) as { roadmap: Roadmap };
+      const data = (await res.json()) as { roadmap: Roadmap; shareToken?: string | null };
       setStatus('success');
-      setTimeout(() => onRoadmapReady(data.roadmap), 700);
+      setTimeout(() => onRoadmapReady(data.roadmap, data.shareToken ?? null), 700);
     } catch (err) {
       if (err instanceof Error && (err.name === 'RoadmapGenerationFailed' || err.message === 'generation_failed')) {
         setStatus('generation_failed');

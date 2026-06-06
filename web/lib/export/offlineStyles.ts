@@ -1711,4 +1711,548 @@ body {
     animation: none;
   }
 }
+
+/* ── Mobile responsive — iOS Safari + Android Chrome ───────────────────────── */
+
+@media (max-width: 767px), (max-height: 500px) and (pointer: coarse) {
+  /* ── Page & shell ──────────────────────────────────────────────────────── */
+
+  .roadmap-page {
+    overflow-x: hidden !important;
+  }
+
+  .roadmap-topbar {
+    min-height: 62px;
+    padding: 9px 14px;
+    gap: 12px;
+  }
+
+  .roadmap-title {
+    min-width: 0;
+  }
+
+  .roadmap-title h2 {
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .roadmap-title p {
+    overflow: hidden;
+    max-width: 210px;
+    margin-top: 3px;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .roadmap-cta {
+    min-height: 38px;
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 0 7px 0 11px;
+    font-size: 9.5px;
+  }
+
+  .roadmap-cta svg {
+    width: 23px;
+    height: 23px;
+    padding: 6px;
+  }
+
+  .roadmap-shell {
+    padding: 0 0 max(72px, env(safe-area-inset-bottom));
+  }
+
+  .roadmap-heading {
+    margin-bottom: 12px;
+    padding: 24px 18px 0;
+    text-align: left;
+  }
+
+  .roadmap-heading span {
+    padding: 6px 12px;
+    font-size: 9px;
+  }
+
+  .roadmap-heading h1 {
+    max-width: 350px;
+    margin: 13px 0 0;
+    font-size: clamp(30px, 9.2vw, 38px) !important;
+    line-height: 1 !important;
+    text-wrap: balance;
+  }
+
+  .roadmap-utility-row {
+    margin: 0;
+    padding: 6px 16px 10px;
+  }
+
+  .glossary-trigger {
+    min-height: 36px;
+    grid-template-columns: 14px auto auto;
+    gap: 6px;
+    padding: 0 9px 0 10px;
+    box-shadow: 1px 1px 0 rgba(226, 191, 183, 0.4), 0 5px 12px rgba(26, 28, 28, 0.035);
+    touch-action: manipulation;
+  }
+
+  .glossary-trigger span {
+    font-size: 11px;
+  }
+
+  .glossary-trigger small {
+    font-size: 10px;
+    padding-left: 6px;
+  }
+
+  /* ── Bottom sheet panels ───────────────────────────────────────────────── */
+
+  .roadmap-panel {
+    width: 100% !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: 85vh;
+    border-left: none !important;
+    border-top: 1px solid var(--color-border-warm);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -12px 40px rgba(26, 28, 28, 0.18) !important;
+    padding: 8px 16px max(48px, calc(24px + env(safe-area-inset-bottom))) !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    overscroll-behavior: contain;
+  }
+
+  .roadmap-panel.panel-open {
+    transform: translateY(0) !important;
+  }
+
+  .glossary-panel {
+    width: auto !important;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    height: min(78dvh, 680px);
+    border: 1px solid var(--color-border-warm) !important;
+    border-radius: 18px;
+    padding: 7px 12px max(24px, calc(14px + env(safe-area-inset-bottom))) !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    overscroll-behavior: contain;
+  }
+
+  .glossary-panel.panel-open {
+    transform: translateY(0) !important;
+  }
+
+  .roadmap-backdrop,
+  .glossary-backdrop {
+    top: 0 !important;
+  }
+
+  /* ── Checkpoint strip ──────────────────────────────────────────────────── */
+
+  .checkpoint-strip {
+    margin: 10px 16px !important;
+    border-radius: 16px;
+    box-shadow: 3px 3px 0 rgba(226, 191, 183, 0.3), 0 14px 30px rgba(26, 28, 28, 0.05);
+    padding: 16px !important;
+  }
+
+  .checkpoint-strip-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  .checkpoint-card {
+    width: 100% !important;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .checkpoint-card-mini {
+    padding: 16px;
+  }
+
+  .checkpoint-card-goal {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+  }
+
+  .checkpoint-card-capstone .checkpoint-card-goal {
+    -webkit-line-clamp: 4;
+  }
+
+  .primer-strip-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .primer-strip-head strong {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .primer-strip {
+    padding: 0 16px;
+  }
+
+  /* ── Vertical spine canvas ─────────────────────────────────────────────── */
+
+  .roadmap-canvas {
+    width: 100%;
+    min-height: 220px;
+    overflow: visible;
+    max-width: 100% !important;
+    margin: 0;
+  }
+
+  .roadmap-canvas::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 44px;
+    bottom: 106px;
+    width: 2px;
+    transform: translateX(-50%);
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 99, 67, 0.44) 0 7px,
+      transparent 7px 15px
+    );
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 160ms ease;
+  }
+
+  .roadmap-canvas-mobile-ready::before {
+    opacity: 1;
+  }
+
+  /* Hide desktop snake SVG + spine icons */
+  .roadmap-path,
+  .project-spine-icon {
+    display: none !important;
+  }
+
+  .roadmap-node {
+    position: absolute;
+    display: flex;
+    flex-direction: column !important;
+    align-items: center !important;
+    border-radius: 18px;
+    padding: 0 !important;
+    animation: none !important;
+    z-index: 1;
+    touch-action: manipulation;
+  }
+
+  .roadmap-node::before {
+    content: '';
+    width: 2px;
+    height: 12px;
+    flex: 0 0 12px;
+    order: 2;
+    background: var(--color-primary-vivid);
+    opacity: 0.7;
+  }
+
+  .roadmap-dot {
+    order: 1;
+    flex-shrink: 0;
+    box-shadow:
+      0 0 0 12px rgba(255, 99, 67, 0.1),
+      0 7px 18px rgba(255, 99, 67, 0.22),
+      inset 0 -3px 0 rgba(97, 12, 0, 0.16);
+  }
+
+  .roadmap-dot-active {
+    transform: scale(1.06);
+    box-shadow:
+      0 0 0 14px rgba(255, 99, 67, 0.16),
+      0 9px 22px rgba(255, 99, 67, 0.28),
+      inset 0 -3px 0 rgba(97, 12, 0, 0.18);
+  }
+
+  .roadmap-dot-project {
+    border-radius: 13px;
+    flex-shrink: 0;
+  }
+
+  .roadmap-tile {
+    order: 3;
+    max-width: 100% !important;
+    min-height: 66px;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    border-radius: 12px;
+    box-shadow: 3px 3px 0 rgba(226, 191, 183, 0.45), 0 12px 24px rgba(26, 28, 28, 0.06);
+  }
+
+  .roadmap-tile-copy {
+    padding: 12px 13px;
+  }
+
+  .roadmap-tile-copy strong {
+    font-size: 14px;
+    line-height: 1.22;
+    text-wrap: pretty;
+  }
+
+  .roadmap-tile-date strong {
+    font-size: 17px;
+  }
+
+  .roadmap-node:active .roadmap-tile {
+    transform: scale(0.98);
+  }
+
+  .roadmap-finish-stamp {
+    min-width: 220px;
+    min-height: 48px;
+    border-radius: 16px;
+    padding: 8px 14px 8px 8px;
+  }
+
+  .roadmap-finish-copy strong {
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  /* Capstone collapses to 1-col on mobile */
+  .checkpoint-card-capstone {
+    grid-template-columns: 1fr !important;
+  }
+
+  .checkpoint-capstone-header {
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Drag handle pill */
+  .roadmap-panel::before,
+  .glossary-panel::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(26, 28, 28, 0.18);
+    margin: 0 auto 12px;
+  }
+
+  /* ── Panel content ─────────────────────────────────────────────────────── */
+
+  .panel-body {
+    gap: 14px !important;
+  }
+
+  .panel-body h3 {
+    font-size: 20px !important;
+    line-height: 1.15 !important;
+  }
+
+  .panel-explanation {
+    border-radius: 12px;
+    padding: 14px !important;
+  }
+
+  .panel-lede,
+  .panel-section p,
+  .checkpoint-box p {
+    font-size: 13px !important;
+  }
+
+  .node-map {
+    gap: 12px;
+    border-radius: 14px;
+    padding: 14px 10px 16px;
+  }
+
+  .node-map-titlebar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .node-map-titlebar strong {
+    font-size: 15px;
+    text-align: left;
+  }
+
+  .node-map-grid {
+    grid-template-columns: minmax(0, 1fr) 18px 84px 18px minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    min-height: var(--node-map-stack-height, 160px) !important;
+    width: 100%;
+    gap: 7px 0 !important;
+  }
+
+  .node-map-cluster-label {
+    text-align: center;
+  }
+
+  .node-map-cluster-label-left {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    text-align: right;
+  }
+
+  .node-map-cluster-label-right {
+    grid-column: 5 !important;
+    grid-row: 1 !important;
+    text-align: left;
+  }
+
+  .node-map-column {
+    min-height: var(--node-map-stack-height, 160px) !important;
+    justify-content: center;
+  }
+
+  .node-map-column-left  { grid-column: 1 !important; grid-row: 2 !important; }
+  .node-map-column-right { grid-column: 5 !important; grid-row: 2 !important; }
+
+  .node-map-branch {
+    display: flex !important;
+    min-height: var(--node-map-stack-height, 160px) !important;
+  }
+
+  .node-map-branch-left {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+
+  .node-map-branch-right {
+    grid-column: 4 !important;
+    grid-row: 2 !important;
+  }
+
+  .node-map-branch-left::before { left: 6px; }
+  .node-map-branch-left::after { left: 6px; right: 0; }
+  .node-map-branch-right::before { right: 6px; }
+  .node-map-branch-right::after { left: 0; right: 6px; }
+
+  .node-map-branch-row::before {
+    width: 7px;
+  }
+
+  .node-map-center {
+    display: flex !important;
+    grid-column: 3 !important;
+    grid-row: 1 / span 2 !important;
+    min-height: calc(var(--node-map-stack-height, 160px) + 22px) !important;
+  }
+
+  .node-map-center::before,
+  .node-map-center::after {
+    width: 8px;
+  }
+
+  .node-map-badge {
+    width: 84px;
+    min-height: 58px;
+    border-radius: 9px;
+    padding: 8px 6px;
+  }
+
+  .node-map-badge strong {
+    font-size: 9.5px;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .node-map-pill {
+    width: 100% !important;
+    min-height: 34px !important;
+    border-radius: 8px;
+    padding: 6px 5px !important;
+    font-size: 9px !important;
+    line-height: 1.14;
+    overflow-wrap: anywhere;
+  }
+
+  .node-map-pills {
+    min-height: var(--node-map-stack-height, 160px) !important;
+    gap: 8px !important;
+  }
+
+  .node-map-pill-slot {
+    height: 34px !important;
+  }
+
+  /* Atoms grid — 1-col on mobile */
+  .subtopic-detail-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .subtopic-detail-card h4 {
+    font-size: 12px !important;
+  }
+
+  .subtopic-detail-card p {
+    font-size: 12px !important;
+  }
+
+  /* ── Glossary ──────────────────────────────────────────────────────────── */
+
+  .glossary-term {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    border-radius: 9px;
+    padding: 9px 10px;
+  }
+
+  .glossary-term > div > span {
+    display: none;
+  }
+
+  .glossary-body {
+    gap: 12px;
+  }
+
+  .glossary-list {
+    gap: 7px;
+  }
+
+  .glossary-heading {
+    gap: 5px;
+    padding-bottom: 11px;
+  }
+
+  .glossary-heading h3 {
+    font-size: 19px !important;
+  }
+
+  .glossary-heading p {
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  .glossary-term h4 {
+    font-size: 12px;
+  }
+
+  .glossary-term p,
+  .glossary-def-list li {
+    font-size: 11px;
+    line-height: 1.38;
+  }
+
+  .panel-close {
+    width: 44px;
+    height: 44px;
+    touch-action: manipulation;
+  }
+}
 `;

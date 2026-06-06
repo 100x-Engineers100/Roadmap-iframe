@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { BookOpen, ExternalLink, Download } from 'lucide-react';
-import { generateOfflineHTML } from '@/lib/export/generateOfflineHTML';
+import { BookOpen, ExternalLink, Link } from 'lucide-react';
 import { ProjectSidePanel } from '@/components/roadmap/ProjectSidePanel';
 import { RoadmapCanvas } from '@/components/roadmap/RoadmapCanvas';
 import { RoadmapGlossaryPanel } from '@/components/roadmap/RoadmapGlossaryPanel';
@@ -21,12 +20,14 @@ interface Props {
   roadmap: Roadmap;
   roleCategory: RoleCategory;
   socTitle: string;
+  shareToken?: string | null;
 }
 
-export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
+export function RoadmapView({ roadmap, roleCategory, socTitle, shareToken }: Props) {
   const [selected, setSelected] = useState<RoadmapNodeItem | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectCheckpoint | null>(null);
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const isMobile = useIsMobile();
   const roleName = ROLE_DISPLAY[roleCategory];
   const items = useMemo(() => getRoadmapItems(roadmap), [roadmap]);
@@ -45,16 +46,14 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
     return indices;
   }, [items.length]);
 
-  const handleDownload = useCallback(() => {
-    const html = generateOfflineHTML(roadmap, roleCategory, socTitle);
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `roadmap-${roleCategory}-${Date.now()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [roleCategory, roadmap, socTitle]);
+  const handleCopyLink = useCallback(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://100x-roadmap.vercel.app';
+    const shareUrl = `${baseUrl}/r/${shareToken}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [shareToken]);
 
   return (
     <div className={`${roadmapStyles.scope} roadmap-page`}>
@@ -64,14 +63,16 @@ export function RoadmapView({ roadmap, roleCategory, socTitle }: Props) {
           <p>{socTitle}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            type="button"
-            onClick={handleDownload}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(226,191,183,0.8)', background: 'rgba(255,255,255,0.9)', color: '#5a413b', fontFamily: 'var(--font-heading)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', cursor: 'pointer' }}
-          >
-            <Download size={13} />
-            <span>Download</span>
-          </button>
+          {shareToken && (
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(226,191,183,0.8)', background: 'rgba(255,255,255,0.9)', color: '#5a413b', fontFamily: 'var(--font-heading)', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', cursor: 'pointer' }}
+            >
+              <Link size={13} />
+              <span>{copied ? 'Copied!' : 'Copy Link'}</span>
+            </button>
+          )}
           <a className="roadmap-cta" href="https://www.100xengineers.com/" target="_blank" rel="noopener noreferrer">
             <span>Train with 100x</span>
             <ExternalLink size={14} />

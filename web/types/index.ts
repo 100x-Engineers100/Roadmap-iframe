@@ -343,4 +343,5 @@ export interface Lead {
   brevo_contact_id: string | null;
   email_seq_started_at: string | null;
   email_seq_completed_at: string | null;
+  share_token: string | null;
 }

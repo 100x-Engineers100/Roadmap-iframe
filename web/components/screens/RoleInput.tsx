@@ -11,6 +11,64 @@ import { inferRoleCategory } from '@/lib/utils/role-mapper';
 import { normalizeRoleCategory } from '@/lib/profile/user-work-profile.mjs';
 import type { SOCMatch, OnetTask, RoleCategory, WorkContext } from '@/types';
 
+// Known role vocabulary — words that belong in a job title.
+// Used to strip trailing company/context words when no separator is present.
+const ROLE_VOCAB = new Set([
+  'senior', 'junior', 'lead', 'principal', 'staff', 'associate', 'entry', 'mid', 'chief',
+  'manager', 'engineer', 'developer', 'designer', 'analyst', 'scientist', 'architect',
+  'consultant', 'specialist', 'director', 'officer', 'executive', 'coordinator',
+  'administrator', 'strategist', 'researcher', 'advisor', 'expert', 'head',
+  'product', 'data', 'software', 'hardware', 'frontend', 'backend', 'fullstack',
+  'mobile', 'devops', 'cloud', 'security', 'marketing', 'growth', 'sales',
+  'finance', 'operations', 'hr', 'people', 'customer', 'success', 'support',
+  'business', 'technical', 'technology', 'ai', 'ml', 'ux', 'ui',
+  'pm', 'vp', 'cto', 'cpo', 'cmo', 'cfo', 'coo', 'cso', 'cxo',
+  'of', 'and',
+]);
+
+// Tokens that must stay uppercase in display titles.
+const ACRONYMS = new Set(['pm', 'ux', 'ui', 'seo', 'vp', 'cto', 'cpo', 'cmo', 'cfo', 'coo', 'cso', 'cxo', 'hr', 'ai', 'ml', 'b2b', 'b2c', 'saas', 'api']);
+
+function titleCase(text: string): string {
+  return text.replace(/\w\S*/g, w => {
+    const lower = w.toLowerCase();
+    if (ACRONYMS.has(lower)) return lower.toUpperCase();
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  });
+}
+
+// Extracts the role portion from raw input for display only.
+// "Product Manager at Google" → "Product Manager"
+// "Senior Data Analyst in fintech" → "Senior Data Analyst"
+// "Product Manager Google" → "Product Manager" (strips non-role trailing word)
+// Falls back to O*NET title if nothing clean can be extracted.
+function extractDisplayTitle(rawInput: string, onetTitle: string): string {
+  const trimmed = rawInput.trim();
+  if (!trimmed) return onetTitle;
+
+  // Has context separator → extract everything before it
+  const sepMatch = trimmed.match(/^(.+?)\s+(?:at|in|for|with|@)\s+.+$/i);
+  if (sepMatch) {
+    const rolePart = sepMatch[1].trim();
+    if (rolePart.length >= 2 && rolePart.length <= 40 && rolePart.split(' ').length <= 5) {
+      return titleCase(rolePart);
+    }
+  }
+
+  // No separator — strip trailing words not in role vocabulary
+  const words = trimmed.split(/\s+/);
+  let endIdx = words.length;
+  while (endIdx > 1 && !ROLE_VOCAB.has(words[endIdx - 1].toLowerCase())) {
+    endIdx--;
+  }
+  const candidate = words.slice(0, endIdx).join(' ');
+  if (candidate.length >= 2 && candidate.length <= 40 && candidate.split(' ').length <= 6) {
+    return titleCase(candidate);
+  }
+
+  return onetTitle;
+}
+
 interface SocMatchResponse {
   primary: SOCMatch;
   alternatives: SOCMatch[];
@@ -88,7 +146,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
       const res = await fetch(`/api/onet-tasks?soc=${encodeURIComponent(activeSoc.soc_code)}`);
       if (!res.ok) throw new Error('Failed to load role tasks');
       const data = await res.json() as { tasks: OnetTask[] };
-      const inferredRole = inferRoleCategory(activeSoc.soc_code, activeSoc.title);
+      const inferredRole = inferRoleCategory(activeSoc.soc_code, activeSoc.title, input);
       const role = normalizeRoleCategory(inferredRole, input, activeSoc.title) as RoleCategory;
       onConfirm(activeSoc, data.tasks, role, input, workContext);
     } catch {
@@ -100,12 +158,13 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
 
   const handleInputChange = (nextInput: string) => {
     setInput(nextInput);
+    // Always clear stale match so card never echoes outdated data while user types
+    setMatch(null);
+    setError(null);
+    setShowAlts(false);
+    setSelectedAltCode('');
     if (!nextInput.trim() || nextInput.length < 3) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      setMatch(null);
-      setError(null);
-      setShowAlts(false);
-      setSelectedAltCode('');
     }
   };
 
@@ -227,7 +286,7 @@ export function RoleInput({ savedInput = '', savedMatch = null, onConfirm }: Pro
                       color: '#1a1c1c',
                     }}
                   >
-                    {activeSoc?.title ?? match.primary.title}
+                    {extractDisplayTitle(input, activeSoc?.title ?? match.primary.title)}
                   </h2>
                   <p
                     className="mt-2"
